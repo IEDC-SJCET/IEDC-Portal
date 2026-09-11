@@ -209,7 +209,7 @@ export default function ProfilePage() {
     );
   }
 
-  const avatar = profile?.photoUrl || session?.user?.image || "/profile/avatar.png";
+  const avatar = profile?.photoUrl || session?.user?.image || "/profile/avatar.webp";
   const nameUpper = profile?.name ? profile.name.toUpperCase() : "STUDENT NAME";
 
   return (

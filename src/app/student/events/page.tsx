@@ -15,82 +15,6 @@ const FILTER_ITEMS = [
   { key: "completed", label: "Completed" },
 ];
 
-const TECHY_PEDIA_POSTER = `data:image/svg+xml;utf8,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" width="247" height="303" viewBox="0 0 247 303">
-  <rect width="247" height="303" fill="#D9383A"/>
-  <rect x="10" y="10" width="227" height="40" rx="6" fill="#FACC15"/>
-  <text x="227" y="30" text-anchor="end" font-family="Hanken Grotesk, sans-serif" font-weight="900" font-size="20" fill="#D9383A">TECHY</text>
-  <text x="227" y="46" text-anchor="end" font-family="Hanken Grotesk, sans-serif" font-weight="900" font-size="20" fill="#D9383A">PEDIA</text>
-  <rect x="14" y="14" width="105" height="32" rx="4" fill="#E11D48"/>
-  <text x="20" y="27" font-family="Hanken Grotesk, sans-serif" font-weight="800" font-size="10" fill="#FDE047">08TH JULY 26</text>
-  <text x="20" y="38" font-family="Hanken Grotesk, sans-serif" font-weight="700" font-size="8" fill="#FFFFFF">3:30 TO 4:30 | OFFLINE</text>
-  <g transform="translate(24, 60)">
-    <rect x="0" y="0" width="199" height="130" rx="8" fill="#FFF" fill-opacity="0.1"/>
-    <ellipse cx="100" cy="70" rx="55" ry="50" fill="#FDA4AF"/>
-    <ellipse cx="100" cy="55" rx="30" ry="32" fill="#881337"/>
-    <ellipse cx="100" cy="52" rx="24" ry="24" fill="#FECDD3"/>
-    <path d="M60 115 C60 85 140 85 140 115 Z" fill="#9F1239"/>
-  </g>
-  <rect x="14" y="195" width="219" height="60" rx="8" fill="#9F1239" opacity="0.95"/>
-  <text x="123" y="209" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-weight="700" font-size="9" fill="#FECDD3">Our Speaker</text>
-  <text x="123" y="223" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-weight="800" font-size="14" fill="#FFFFFF">Lena Annette Wilson</text>
-  <rect x="24" y="231" width="199" height="18" rx="9" fill="#FACC15"/>
-  <text x="123" y="244" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-weight="800" font-size="9" fill="#1E1B4B">How I Built This (And How You Can Too)</text>
-  <text x="123" y="270" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-weight="700" font-size="10" fill="#FFFFFF">Venue : IDEALab</text>
-  <line x1="14" y1="277" x2="233" y2="277" stroke="#FDA4AF" stroke-width="0.8"/>
-  <text x="20" y="291" font-family="Hanken Grotesk, sans-serif" font-weight="800" font-size="8" fill="#FFFFFF">ST. JOSEPH'S COLLEGE OF ENG & TECH</text>
-</svg>
-`)}`;
-
-const WEDNESDAY_CAFE_POSTER = `data:image/svg+xml;utf8,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" width="247" height="303" viewBox="0 0 247 303">
-  <rect width="247" height="303" fill="#0284C7"/>
-  <text x="123" y="30" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-weight="900" font-size="20" fill="#FFFFFF" letter-spacing="-0.5">WEDNESDAY CAFE</text>
-  <text x="123" y="44" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-weight="700" font-size="9" fill="#BAE6FD" letter-spacing="1">CLEARED FOR TAKEOFF</text>
-  <rect x="180" y="12" width="53" height="34" rx="4" fill="#0369A1"/>
-  <text x="206" y="25" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-weight="800" font-size="8" fill="#7DD3FC">JULY 15</text>
-  <text x="206" y="38" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-weight="800" font-size="10" fill="#FFFFFF">2026</text>
-  <g transform="translate(24, 55)">
-    <ellipse cx="100" cy="65" rx="55" ry="50" fill="#E0F2FE"/>
-    <ellipse cx="100" cy="50" rx="30" ry="32" fill="#0369A1"/>
-    <ellipse cx="100" cy="48" rx="24" ry="24" fill="#BAE6FD"/>
-    <path d="M60 110 C60 80 140 80 140 110 Z" fill="#075985"/>
-  </g>
-  <path d="M210 145 L230 130 L225 150 L240 155 L210 160 Z" fill="#7DD3FC" opacity="0.7"/>
-  <text x="220" y="175" text-anchor="end" font-family="Hanken Grotesk, sans-serif" font-weight="800" font-size="13" fill="#FFFFFF">Aibel Bin Zacariah</text>
-  <text x="220" y="187" text-anchor="end" font-family="Hanken Grotesk, sans-serif" font-weight="600" font-size="9" fill="#BAE6FD">AI Research Scientist</text>
-  <rect x="20" y="198" width="207" height="30" rx="6" fill="#FFFFFF"/>
-  <text x="123" y="218" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-weight="900" font-size="11" fill="#0F172A">*How to Fly a Boeing 737*</text>
-  <text x="20" y="248" font-family="Hanken Grotesk, sans-serif" font-weight="700" font-size="9" fill="#E0F2FE">15TH JULY 26 | 3:30PM OFFLINE</text>
-  <text x="227" y="248" text-anchor="end" font-family="Hanken Grotesk, sans-serif" font-weight="700" font-size="9" fill="#E0F2FE">VENUE : IDEALab</text>
-  <line x1="14" y1="258" x2="233" y2="258" stroke="#38BDF8" stroke-width="0.8"/>
-  <text x="20" y="285" font-family="Hanken Grotesk, sans-serif" font-weight="800" font-size="8" fill="#FFFFFF">ST. JOSEPH'S COLLEGE OF ENG & TECH</text>
-</svg>
-`)}`;
-
-const EXECOM_POSTER = `data:image/svg+xml;utf8,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" width="247" height="303" viewBox="0 0 247 303">
-  <rect width="247" height="303" fill="#1A0D0C"/>
-  <circle cx="123" cy="110" r="70" fill="#E11D48" opacity="0.3"/>
-  <polygon points="123,50 135,80 167,80 140,100 150,130 123,110 96,130 106,100 79,80 111,80" fill="#FACC15"/>
-  <text x="123" y="165" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-weight="800" font-size="12" fill="#94A3B8" letter-spacing="2">INTRODUCING</text>
-  <text x="123" y="195" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-weight="900" font-size="24" fill="#FFFFFF">IEDC EXECOM</text>
-  <text x="123" y="225" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-weight="900" font-size="26" fill="#FACC15">‘26</text>
-  <text x="123" y="270" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-weight="700" font-size="9" fill="#94A3B8">ST. JOSEPH'S COLLEGE OF ENG & TECH</text>
-</svg>
-`)}`;
-
-const SPEAKER_POSTER = `data:image/svg+xml;utf8,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" width="247" height="303" viewBox="0 0 247 303">
-  <rect width="247" height="303" fill="#4C1D95"/>
-  <circle cx="123" cy="110" r="50" fill="#A78BFA"/>
-  <path d="M83 170 C83 130 163 130 163 170 Z" fill="#6D28D9"/>
-  <text x="123" y="200" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-weight="900" font-size="18" fill="#FFFFFF">KEYNOTE SPEAKER</text>
-  <text x="123" y="220" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-weight="700" font-size="12" fill="#DDD6FE">Tech Summit 2026</text>
-  <text x="123" y="265" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-weight="700" font-size="9" fill="#C4B5FD">VENUE : MAIN AUDITORIUM</text>
-</svg>
-`)}`;
-
 function StudentEventsContent() {
   const searchParams = useSearchParams();
   const [events, setEvents] = useState<EventCardProps[]>([]);
@@ -211,17 +135,26 @@ function StudentEventsContent() {
     return matchesTab && matchesSearch;
   });
 
-  const realPosters = upcomingEvents
-    .map((e) => e.posterUrl)
-    .filter(Boolean) as string[];
+  const toPosterInfo = (list: EventCardProps[]) =>
+    list
+      .filter((e) => Boolean(e.posterUrl))
+      .map((e) => ({ url: e.posterUrl as string, title: e.title }));
 
-  const bannerPosters = [
-    ...realPosters,
-    TECHY_PEDIA_POSTER,
-    WEDNESDAY_CAFE_POSTER,
-    EXECOM_POSTER,
-    SPEAKER_POSTER,
-  ].slice(0, 4);
+  const upcomingPosters = toPosterInfo(upcomingEvents);
+
+  const completedEventsByRecency = events
+    .filter((e) => e.isClosed)
+    .sort((a, b) => {
+      const aTime = new Date(a.endDatetime || a.startDatetime || 0).getTime();
+      const bTime = new Date(b.endDatetime || b.startDatetime || 0).getTime();
+      return bTime - aTime;
+    });
+
+  const completedPosters = toPosterInfo(completedEventsByRecency);
+
+  const bannerPosters = (
+    upcomingPosters.length > 0 ? upcomingPosters : completedPosters
+  ).slice(0, 4);
 
   return (
     <div className="w-full space-y-6 font-['Hanken_Grotesk'] text-[#1A0D0C] pb-16">
@@ -235,28 +168,30 @@ function StudentEventsContent() {
           </p>
         </div>
 
-        <div className="relative flex items-center justify-end pr-4 py-2 md:py-0 w-full md:w-auto h-[160px] shrink-0 overflow-visible">
-          <div className="flex items-center -space-x-12 hover:-space-x-6 transition-all duration-300">
-            {bannerPosters.map((poster, idx) => (
-              <div
-                key={idx}
-                className={cn(
-                  "w-[110px] h-[145px] rounded-[16px] border-2 border-white shadow-xl overflow-hidden shrink-0 transition-transform duration-300 cursor-pointer bg-slate-900",
-                  idx === 0 && "-rotate-6 hover:rotate-0 z-40 hover:z-50",
-                  idx === 1 && "rotate-6 hover:rotate-0 z-30 hover:z-50",
-                  idx === 2 && "-rotate-3 hover:rotate-0 z-20 hover:z-50",
-                  idx === 3 && "rotate-8 hover:rotate-0 z-10 hover:z-50"
-                )}
-              >
-                <img
-                  src={poster}
-                  alt={`Upcoming event ${idx + 1}`}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ))}
+        {bannerPosters.length > 0 && (
+          <div className="relative flex items-center justify-end pr-4 py-2 md:py-0 w-full md:w-auto h-[160px] shrink-0 overflow-visible">
+            <div className="flex items-center -space-x-12 hover:-space-x-6 transition-all duration-300">
+              {bannerPosters.map((poster, idx) => (
+                <div
+                  key={poster.url + idx}
+                  className={cn(
+                    "w-[110px] h-[145px] rounded-[16px] border-2 border-white shadow-xl overflow-hidden shrink-0 transition-transform duration-300 cursor-pointer bg-slate-900",
+                    idx === 0 && "-rotate-6 hover:rotate-0 z-40 hover:z-50",
+                    idx === 1 && "rotate-6 hover:rotate-0 z-30 hover:z-50",
+                    idx === 2 && "-rotate-3 hover:rotate-0 z-20 hover:z-50",
+                    idx === 3 && "rotate-8 hover:rotate-0 z-10 hover:z-50"
+                  )}
+                >
+                  <img
+                    src={poster.url}
+                    alt={poster.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="flex items-center gap-3 overflow-x-auto pb-2 pt-1 scrollbar-hide max-w-[1014px]">

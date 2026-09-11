@@ -162,7 +162,7 @@ export default function LoginPage() {
 
       <div className="pointer-events-none absolute right-1 z-0 h-50 w-50 sm:hidden rotate-15 opacity-60">
         <Image
-          src="/login/telegram.png"
+          src="/login/telegram.webp"
           alt="telegram"
           fill
           sizes="200px"
@@ -173,7 +173,7 @@ export default function LoginPage() {
 
       <div className="pointer-events-none absolute right-[10%] top-[10%] z-0 hidden w-65 items-center justify-center opacity-100 sm:flex sm:w-75 md:w-85 lg:w-95">
         <Image
-          src="/login/telegram.png"
+          src="/login/telegram.webp"
           alt="telegram"
           width={320}
           height={320}

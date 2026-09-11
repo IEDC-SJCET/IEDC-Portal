@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { studentProfiles, pointsLog } from "@/db/schema";
+import { studentProfiles, pointsLog, users } from "@/db/schema";
 import { desc, eq, gte, and, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import {
@@ -34,7 +34,10 @@ async function fetchFromDb(
         totalPoints: studentProfiles.totalPoints,
       })
       .from(studentProfiles)
-      .where(eq(studentProfiles.isDeleted, false))
+      .innerJoin(users, eq(users.id, studentProfiles.userId))
+      .where(
+        and(eq(studentProfiles.isDeleted, false), eq(users.role, "student"))
+      )
       .orderBy(desc(studentProfiles.totalPoints))
       .limit(limit)
       .offset(offset);
@@ -61,6 +64,7 @@ async function fetchFromDb(
       periodPoints: sql<number>`COALESCE(SUM(${pointsLog.points}), 0)`,
     })
     .from(studentProfiles)
+    .innerJoin(users, eq(users.id, studentProfiles.userId))
     .leftJoin(
       pointsLog,
       and(
@@ -68,7 +72,9 @@ async function fetchFromDb(
         gte(pointsLog.awardedAt, start)
       )
     )
-    .where(eq(studentProfiles.isDeleted, false))
+    .where(
+      and(eq(studentProfiles.isDeleted, false), eq(users.role, "student"))
+    )
     .groupBy(
       studentProfiles.iecdId,
       studentProfiles.name,

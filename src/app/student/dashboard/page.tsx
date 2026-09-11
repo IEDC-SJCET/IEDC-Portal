@@ -136,7 +136,7 @@ export default function StudentDashboard() {
     totalPoints: points,
     eventsAttended: eventsParticipatedCount,
   };
-  const avatar = session?.user?.image || "/profile/avatar.png";
+  const avatar = session?.user?.image || "/profile/avatar.webp";
 
   if (loading) {
     return (

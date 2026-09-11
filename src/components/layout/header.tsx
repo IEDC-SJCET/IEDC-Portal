@@ -36,11 +36,11 @@ interface HeaderProps {
 const DEFAULT_ICONS: Record<string, { bg: string; icon: string }> = {
   Home: { bg: "bg-[#E52600]", icon: "/illustrations/Home.svg" },
   Dashboard: { bg: "bg-[#E52600]", icon: "/illustrations/Home.svg" },
-  Events: { bg: "bg-[#1D60C8]", icon: "/illustrations/File.png" },
+  Events: { bg: "bg-[#1D60C8]", icon: "/illustrations/file.webp" },
   Leaderboard: { bg: "bg-[#CE322D]", icon: "/illustrations/Hash.svg" },
-  Certificates: { bg: "bg-[#20A300]", icon: "/illustrations/File.png" },
+  Certificates: { bg: "bg-[#20A300]", icon: "/illustrations/file.webp" },
   Badges: { bg: "bg-[#EAA100]", icon: "/illustrations/Trello.svg" },
-  Projects: { bg: "bg-[#10B981]", icon: "/illustrations/File.png" },
+  Projects: { bg: "bg-[#10B981]", icon: "/illustrations/file.webp" },
   Profile: { bg: "bg-[#F59E0B]", icon: "/illustrations/User.svg" },
   CTO: { bg: "bg-[#F59E0B]", icon: "/illustrations/User.svg" },
   Users: { bg: "bg-[#8B5CF6]", icon: "/illustrations/User.svg" },
@@ -355,7 +355,7 @@ function HeaderContent({ items = [], role = "user" }: HeaderProps) {
               <nav className="space-y-2.5">
                 {items.map((item) => {
                   const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-                  const iconConfig = DEFAULT_ICONS[item.label] || { bg: "bg-[#EB594C]", icon: "/illustrations/File.png" };
+                  const iconConfig = DEFAULT_ICONS[item.label] || { bg: "bg-[#EB594C]", icon: "/illustrations/file.webp" };
 
                   return (
                     <Link
