@@ -28,16 +28,21 @@ async function getSession() {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const targetId = searchParams.get("id");
+  const targetIecdId = searchParams.get("iecdId");
 
-  if (targetId) {
-    if (!isUUID(targetId)) {
+  if (targetId || targetIecdId) {
+    if (targetId && !isUUID(targetId)) {
       return NextResponse.json({ error: "Invalid profile ID format" }, { status: 400 });
     }
 
     const [profile] = await db
       .select()
       .from(studentProfiles)
-      .where(or(eq(studentProfiles.id, targetId), eq(studentProfiles.userId, targetId)));
+      .where(
+        targetId
+          ? or(eq(studentProfiles.id, targetId), eq(studentProfiles.userId, targetId))
+          : eq(studentProfiles.iecdId, targetIecdId!)
+      );
 
     if (!profile) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
