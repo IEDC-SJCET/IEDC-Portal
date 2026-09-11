@@ -9,8 +9,8 @@ interface ProfileDownloadCardProps {
   githubRepos?: number | null;
 }
 
-const BACKGROUND_PATTERN = "/profile/background.png";
-const RECTANGLE_CUTOUT = "/profile/Rectangle.png";
+const BACKGROUND_PATTERN = "/profile/background.webp";
+const RECTANGLE_CUTOUT = "/profile/rectangle.webp";
 
 export const ProfileDownloadCard = forwardRef<HTMLDivElement, ProfileDownloadCardProps>(
   ({ profile, avatar, githubRepos: initialGithubRepos }, ref) => {
@@ -70,7 +70,7 @@ export const ProfileDownloadCard = forwardRef<HTMLDivElement, ProfileDownloadCar
         {/* Centered Scaled-Up Outer ID Card Container (780px width) */}
         <div className="relative z-10 w-195 overflow-hidden rounded-[60px] border-2 border-[#e8594c]/50 bg-[#0c0908] font-['Hanken_Grotesk'] shadow-[0px_45px_120px_-15px_rgba(0,0,0,0.98),0_0_65px_rgba(232,89,76,0.3)] flex flex-col">
           {/* Top ID Pill */}
-          <div className="absolute left-1/2 top-0 z-20 flex h-14 -translate-x-1/2 items-center justify-center rounded-b-[28px] bg-linear-to-b from-red-600 to-red-800 px-12 font-bold text-white shadow-xl">
+          <div className="absolute left-1/2 top-0 z-20 flex h-14 w-max -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-b-[28px] bg-linear-to-b from-red-600 to-red-800 px-12 font-bold text-white shadow-xl">
             <span className="text-base font-bold tracking-widest">{iecdId}</span>
           </div>
 

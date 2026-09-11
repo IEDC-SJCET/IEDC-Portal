@@ -21,7 +21,7 @@ export function LandingHeader() {
       label: "Events",
       href: "/student/events",
       iconBg: "bg-[#1D60C8]",
-      icon: "/illustrations/File.png",
+      icon: "/illustrations/file.webp",
     },
     {
       label: "Leaderboard",
@@ -33,7 +33,7 @@ export function LandingHeader() {
       label: "Certificates",
       href: "/student/certificates",
       iconBg: "bg-[#20A300]",
-      icon: "/illustrations/File.png",
+      icon: "/illustrations/file.webp",
     },
     {
       label: "Badges",
@@ -45,7 +45,7 @@ export function LandingHeader() {
       label: "Projects",
       href: "/student/projects",
       iconBg: "bg-[#10B981]",
-      icon: "/illustrations/File.png",
+      icon: "/illustrations/file.webp",
     },
     {
       label: "Profile",

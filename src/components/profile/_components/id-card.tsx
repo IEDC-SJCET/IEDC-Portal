@@ -65,8 +65,8 @@ interface IdCardProps {
   className?: string;
 }
 
-const BACKGROUND_PATTERN = "/profile/background.png";
-const RECTANGLE_CUTOUT = "/profile/Rectangle.png";
+const BACKGROUND_PATTERN = "/profile/background.webp";
+const RECTANGLE_CUTOUT = "/profile/rectangle.webp";
 export const DEFAULT_AVATAR =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-3.8-1.04-4.84-2.61.03-1.6 3.19-2.48 4.84-2.48s4.81.88 4.84 2.48C15.8 18.96 14.03 20 12 20z'/%3E%3C/svg%3E";
 
@@ -360,7 +360,7 @@ export function IdCard({
       </div>
 
       {/* 2. Top ID Pill */}
-      <div className="absolute left-1/2 top-3 flex h-9.5 -translate-x-1/2 items-center justify-center rounded-b-[20px] bg-linear-to-b from-red-600 to-red-800 px-8 font-semibold text-white shadow-md">
+      <div className="absolute left-1/2 top-3 flex h-9.5 w-max -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-b-[20px] bg-linear-to-b from-red-600 to-red-800 px-8 font-semibold text-white shadow-md">
         <span className="text-sm tracking-wide">
           {profile.iecdId || "IEDC-2025-CSE-00001"}
         </span>

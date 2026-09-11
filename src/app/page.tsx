@@ -10,11 +10,11 @@ import { LandingHeader } from "@/components/layout/LandingHeader";
 export const dynamic = "force-dynamic";
 
 const DEFAULT_POSTERS = [
-  "/illustrations/Rectangle 1100.png",
-  "/illustrations/Rectangle 1101.png",
-  "/illustrations/Rectangle 1102(1).png",
-  "/illustrations/Rectangle 1103.png",
-  "/illustrations/Rectangle 1104.png",
+  "/illustrations/rectangle-1100.webp",
+  "/illustrations/rectangle-1101.webp",
+  "/illustrations/rectangle-1102.webp",
+  "/illustrations/rectangle-1103.webp",
+  "/illustrations/rectangle-1104.webp",
 ];
 
 export default async function LandingPage() {
@@ -112,7 +112,7 @@ export default async function LandingPage() {
 
             <div className="absolute -bottom-8 -right-6 sm:-bottom-10 sm:-right-8 w-36 sm:w-48 md:w-56 aspect-square z-20 pointer-events-none drop-shadow-2xl transform group-hover:scale-105 transition-transform duration-300">
               <Image
-                src="/illustrations/Frame 1618873015.png"
+                src="/illustrations/frame-1618873015.webp"
                 alt="IEDC Paper Plane Badge"
                 fill
                 sizes="(max-width: 640px) 144px, (max-width: 768px) 192px, 224px"
@@ -137,7 +137,7 @@ export default async function LandingPage() {
             <div className="relative w-full h-[300px] sm:h-[340px] flex items-end justify-center self-center overflow-visible z-0 mt-auto">
               <div className="relative w-[105%] h-full transform translate-x-1 translate-y-0 rotate-3 group-hover:scale-105 group-hover:rotate-1 transition-all duration-300">
                 <Image
-                  src="/illustrations/Frame 1618873004.png"
+                  src="/illustrations/frame-1618873004.webp"
                   alt="IEDC Student Legacy Card"
                   fill
                   sizes="(max-width: 1024px) 100vw, 45vw"
@@ -185,7 +185,7 @@ export default async function LandingPage() {
 
                 <div className="relative flex-1 w-full mt-2 sm:mt-4 overflow-visible">
                   <Image
-                    src="/illustrations/student-laptop-blue.png"
+                    src="/illustrations/student-laptop-blue.webp"
                     alt="Event Ecosystem Student"
                     fill
                     sizes="(max-width: 640px) 58vw, (max-width: 1024px) 44vw, 38vw"
@@ -222,7 +222,7 @@ export default async function LandingPage() {
 
                 <div className="relative flex-1 w-full mt-2 sm:mt-4 overflow-visible">
                   <Image
-                    src="/illustrations/student-laptop-green.png"
+                    src="/illustrations/student-laptop-green.webp"
                     alt="Project Incubator Student"
                     fill
                     sizes="(max-width: 640px) 54vw, (max-width: 1024px) 40vw, 36vw"
@@ -260,7 +260,7 @@ export default async function LandingPage() {
 
                 <div className="relative flex-1 w-full mt-2 sm:mt-4 overflow-visible">
                   <Image
-                    src="/illustrations/student-jumping-red.png"
+                    src="/illustrations/student-jumping-red.webp"
                     alt="Badges and Leaderboard Student"
                     fill
                     sizes="(max-width: 640px) 58vw, (max-width: 1024px) 44vw, 38vw"
@@ -373,11 +373,11 @@ export default async function LandingPage() {
             ) : (
               <div className="flex gap-5 sm:gap-6 overflow-x-auto pb-4 px-6 sm:px-10 md:px-14 scrollbar-hide" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
                 {[
-                  { id: "1", title: "Tech Workshop & Hackathon", img: "/illustrations/Rectangle 1100.png" },
-                  { id: "2", title: "Wednesday Launch", img: "/illustrations/Rectangle 1101.png" },
-                  { id: "3", title: "Execom Meetup 2026", img: "/illustrations/Rectangle 1102(1).png" },
-                  { id: "4", title: "Entrepreneurial Thinking", img: "/illustrations/Rectangle 1103.png" },
-                  { id: "5", title: "Linux Kernel Workshop", img: "/illustrations/Rectangle 1104.png" },
+                  { id: "1", title: "Tech Workshop & Hackathon", img: "/illustrations/rectangle-1100.webp" },
+                  { id: "2", title: "Wednesday Launch", img: "/illustrations/rectangle-1101.webp" },
+                  { id: "3", title: "Execom Meetup 2026", img: "/illustrations/rectangle-1102.webp" },
+                  { id: "4", title: "Entrepreneurial Thinking", img: "/illustrations/rectangle-1103.webp" },
+                  { id: "5", title: "Linux Kernel Workshop", img: "/illustrations/rectangle-1104.webp" },
                 ].map((item, idx) => (
                   <Link
                     key={item.id}
@@ -450,7 +450,7 @@ export default async function LandingPage() {
 
                 <div className="relative z-10 w-[240px] sm:w-[280px] lg:w-[310px] h-full flex items-end justify-center transform group-hover:scale-105 transition-transform duration-300">
                   <Image
-                    src="/illustrations/image 785.png"
+                    src="/illustrations/image-785.webp"
                     alt="Innovator Girl Illustration"
                     width={330}
                     height={241}
@@ -466,7 +466,7 @@ export default async function LandingPage() {
             >
               <div className="absolute top-2 left-3 w-12 sm:w-16 h-12 sm:h-16 pointer-events-none z-0 opacity-80 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-300">
                 <Image
-                  src="/illustrations/Star 2.png"
+                  src="/illustrations/star-2.webp"
                   alt="Star decoration"
                   width={110}
                   height={86}
@@ -476,7 +476,7 @@ export default async function LandingPage() {
 
               <div className="relative z-10 w-[207.471px] h-[256.836px] transform rotate-[-7.321deg] group-hover:rotate-[-2deg] group-hover:scale-105 transition-all duration-300 flex items-center justify-center drop-shadow-2xl">
                 <Image
-                  src="/illustrations/Frame 1618873004.png"
+                  src="/illustrations/frame-1618873004.webp"
                   alt="Wednesday Campus Poster"
                   fill
                   sizes="208px"
@@ -493,21 +493,21 @@ export default async function LandingPage() {
             >
               <div className="flex items-center gap-3.5 px-5 py-3 rounded-full bg-white/95 backdrop-blur-sm text-[#130D0D] font-medium shadow-sm hover:scale-[1.02] transition-transform">
                 <div className="w-8 h-8 rounded-full bg-[#E0574C] flex items-center justify-center flex-shrink-0">
-                  <Image src="/illustrations/File.png" alt="Get Certificates" width={18} height={18} className="object-contain" />
+                  <Image src="/illustrations/file.webp" alt="Get Certificates" width={18} height={18} className="object-contain" />
                 </div>
                 <span className="text-base sm:text-lg font-semibold text-[#130D0D]">Get Certificates</span>
               </div>
 
               <div className="flex items-center gap-3.5 px-5 py-3 rounded-full bg-white/95 backdrop-blur-sm text-[#130D0D] font-medium shadow-sm hover:scale-[1.02] transition-transform">
                 <div className="w-8 h-8 rounded-full bg-[#E0574C] flex items-center justify-center flex-shrink-0">
-                  <Image src="/illustrations/Trending up.png" alt="Realtime points" width={18} height={18} className="object-contain" />
+                  <Image src="/illustrations/trending-up.webp" alt="Realtime points" width={18} height={18} className="object-contain" />
                 </div>
                 <span className="text-base sm:text-lg font-semibold text-[#130D0D]">Realtime points</span>
               </div>
 
               <div className="flex items-center gap-3.5 px-5 py-3 rounded-full bg-white/95 backdrop-blur-sm text-[#130D0D] font-medium shadow-sm hover:scale-[1.02] transition-transform">
                 <div className="w-8 h-8 rounded-full bg-[#E0574C] flex items-center justify-center flex-shrink-0">
-                  <Image src="/illustrations/Cloud lightning.png" alt="Secure QR Attendance" width={18} height={18} className="object-contain" />
+                  <Image src="/illustrations/cloud-lightning.webp" alt="Secure QR Attendance" width={18} height={18} className="object-contain" />
                 </div>
                 <span className="text-base sm:text-lg font-semibold text-[#130D0D]">Secure QR Attendance</span>
               </div>
@@ -533,7 +533,7 @@ export default async function LandingPage() {
 
                 <div className="relative z-10 w-[130px] sm:w-[147px] h-[180px] sm:h-[201px] transform rotate-[-8deg] group-hover:rotate-[-2deg] group-hover:scale-105 transition-all duration-300 drop-shadow-xl">
                   <Image
-                    src="/illustrations/Frame 1618873031.png"
+                    src="/illustrations/frame-1618873031.webp"
                     alt="Event #545 ID Card"
                     fill
                     sizes="147px"
@@ -569,7 +569,7 @@ export default async function LandingPage() {
             <div
               className="absolute inset-0 w-full h-full pointer-events-none z-0 opacity-80 mix-blend-soft-light group-hover:scale-105 transition-transform duration-700"
               style={{
-                backgroundImage: "url('/illustrations/44d8ca6ff4a3c6b1faa693b27f1aec3c52767b35.png')",
+                backgroundImage: "url('/illustrations/hero-pattern.webp')",
                 backgroundPosition: "center",
                 backgroundSize: "cover",
                 backgroundRepeat: "no-repeat",

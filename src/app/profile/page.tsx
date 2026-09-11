@@ -70,7 +70,7 @@ export default function PublicProfilePage() {
     );
   }
 
-  const avatar = profile.photoUrl || "/profile/avatar.png";
+  const avatar = profile.photoUrl || "/profile/avatar.webp";
 
   return (
     <div className="relative min-h-screen w-full bg-[#0c0908] font-['Hanken_Grotesk'] text-white flex flex-col justify-between p-4 sm:p-6 lg:p-8 overflow-hidden">
