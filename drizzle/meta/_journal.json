@@ -22,6 +22,13 @@
       "when": 1788803041723,
       "tag": "0002_cute_mandroid",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789187169869,
+      "tag": "0003_certificate_engine",
+      "breakpoints": true
     }
   ]
 }

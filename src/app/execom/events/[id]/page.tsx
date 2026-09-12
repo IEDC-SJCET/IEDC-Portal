@@ -22,6 +22,7 @@ import { EventRegistrationsTable } from "@/components/events/event-registrations
 import { EventAnalytics } from "@/components/events/event-analytics";
 import { PosterUpload } from "@/components/events/poster-upload";
 import { VolunteerManager } from "./_components/volunteer-manager";
+import { CertificateManager } from "./_components/certificate-manager";
 import { useSession } from "@/lib/auth-client";
 import { isAdminRole } from "@/lib/roles";
 import { useAdminSection } from "@/lib/admin-section";
@@ -635,6 +636,13 @@ export default function ExecomEventDetailPage() {
             <VolunteerManager
               eventId={event.id}
               onVolunteersChanged={refreshEventData}
+            />
+          )}
+
+          {canManage && (
+            <CertificateManager
+              eventId={event.id}
+              eventStatus={event.status}
             />
           )}
 

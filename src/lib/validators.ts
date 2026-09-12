@@ -158,6 +158,44 @@ export const createOpportunitySchema = z.object({
 });
 
 // ============================================================
+// CERTIFICATE VALIDATORS
+// ============================================================
+
+/** Accepts only inline PNG/JPEG artwork, capped so a huge upload cannot bloat a row. */
+const certificateArtworkSchema = z
+  .string()
+  .regex(
+    /^data:image\/(png|jpe?g);base64,[A-Za-z0-9+/=\s]+$/i,
+    "Template must be a PNG or JPEG image"
+  )
+  .max(8_000_000, "Template image is too large (max ~6MB)");
+
+export const certificateTemplateSchema = z
+  .object({
+    mode: z.enum(["default", "custom"]),
+    backgroundUrl: certificateArtworkSchema.nullable().optional(),
+    heading: z.string().max(120).nullable().optional(),
+    signatoryName: z.string().max(255).nullable().optional(),
+    signatoryDesignation: z.string().max(255).nullable().optional(),
+    namePosX: z.number().min(0).max(100).optional(),
+    namePosY: z.number().min(0).max(100).optional(),
+    nameFontSize: z.number().int().min(8).max(120).optional(),
+    nameColor: z
+      .string()
+      .regex(/^#[0-9a-fA-F]{6}$/, "Colour must be a hex value like #1A0D0C")
+      .optional(),
+    showDetailLine: z.boolean().optional(),
+    detailPosY: z.number().min(0).max(100).optional(),
+    detailFontSize: z.number().int().min(6).max(60).optional(),
+  })
+  .refine((data) => data.mode !== "custom" || !!data.backgroundUrl, {
+    message: "Upload a template image to use a custom certificate",
+    path: ["backgroundUrl"],
+  });
+
+export type CertificateTemplateInput = z.infer<typeof certificateTemplateSchema>;
+
+// ============================================================
 // INNOVATION IDEA VALIDATORS
 // ============================================================
 
