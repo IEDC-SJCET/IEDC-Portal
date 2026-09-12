@@ -124,3 +124,40 @@ export function getRoleFromSession(session: unknown): string {
   const user = (session as { user?: Record<string, unknown> } | null)?.user;
   return (user?.role as string) || "";
 }
+
+/**
+ * Execom role accounts use shared mailboxes shaped `<role>bootcamp@sjcetpalai.ac.in`
+ * (e.g. `ctobootcamp@sjcetpalai.ac.in`). They are not real students, so onboarding
+ * must not ask them for a batch or an admission number — those are filled in
+ * automatically. Every other college account still completes the full form.
+ */
+export function isExecomBootcampEmail(email: string | null | undefined): boolean {
+  return !!email && email.trim().toLowerCase().endsWith("bootcamp@sjcetpalai.ac.in");
+}
+
+/** Placeholder batch stored for Execom bootcamp accounts (column is NOT NULL, max 9 chars). */
+export const EXECOM_PLACEHOLDER_BATCH = "EXECOM";
+
+/** Department stored for Execom bootcamp accounts — they belong to no academic department. */
+export const EXECOM_PLACEHOLDER_DEPARTMENT = "EXECOM";
+
+/** Deterministic, unique placeholder admission number for an Execom bootcamp account. */
+export function execomPlaceholderAdmissionNumber(email: string): string {
+  const localPart = email.trim().toLowerCase().split("@")[0] ?? "";
+  const sanitized = localPart.replace(/[^a-z0-9]/g, "").toUpperCase() || "ACCOUNT";
+  return `EXECOM-${sanitized}`.slice(0, 50);
+}
+
+/**
+ * Role code carried by an Execom bootcamp mailbox — `ctobootcamp@…` → `CTO`.
+ * Used as the department segment of their IEDC ID so Execom cards read
+ * `IEDC-2026-CTO-00001` instead of blending into a student batch.
+ * Falls back to `EXECOM` when the local part carries no recognisable role.
+ */
+export function execomRoleCodeFromEmail(email: string): string {
+  const localPart = email.trim().toLowerCase().split("@")[0] ?? "";
+  const code = localPart.replace(/bootcamp$/, "").replace(/[^a-z0-9]/g, "");
+  if (!code) return "EXECOM";
+  if ((EXECOM_ROLES as readonly string[]).includes(code)) return code.toUpperCase();
+  return code.slice(0, 8).toUpperCase();
+}
