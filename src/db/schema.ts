@@ -492,21 +492,81 @@ export const studentBadges = pgTable(
 // CERTIFICATES
 // ============================================================
 
-export const certificates = pgTable("certificates", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  certificateNumber: varchar("certificate_number", { length: 50 })
-    .unique()
-    .notNull(),
-  studentId: uuid("student_id").references(() => studentProfiles.id),
-  eventId: uuid("event_id").references(() => events.id),
-  certificateUrl: text("certificate_url").notNull(),
-  issuedAt: timestamp("issued_at", { withTimezone: true }).defaultNow(),
-  issuedBy: uuid("issued_by").references(() => users.id),
-});
+/**
+ * One row per issued certificate. The PDF itself is never stored — it is
+ * re-rendered on demand from this row plus the event's template, so issuing a
+ * batch costs one INSERT instead of hundreds of file writes.
+ *
+ * `recipientName` / `recipientDetail` snapshot the student as they were at
+ * issue time: a certificate is a historical document and must not silently
+ * change if the student later edits their profile.
+ */
+export const certificates = pgTable(
+  "certificates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    certificateNumber: varchar("certificate_number", { length: 50 })
+      .unique()
+      .notNull(),
+    studentId: uuid("student_id").references(() => studentProfiles.id),
+    eventId: uuid("event_id").references(() => events.id),
+    certificateUrl: text("certificate_url").notNull(),
+    recipientName: varchar("recipient_name", { length: 255 }),
+    recipientDetail: varchar("recipient_detail", { length: 255 }),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).defaultNow(),
+    issuedBy: uuid("issued_by").references(() => users.id),
+  },
+  (table) => [
+    // Guarantees re-running "Send certificates" can never double-issue.
+    uniqueIndex("uniq_cert_event_student").on(table.eventId, table.studentId),
+    index("idx_cert_student").on(table.studentId),
+    index("idx_cert_event").on(table.eventId),
+  ]
+);
 
 export const certIdCounter = pgTable("cert_id_counter", {
   year: integer("year").primaryKey(),
   count: integer("count").default(0),
+});
+
+// ============================================================
+// EVENT CERTIFICATE TEMPLATES
+// ============================================================
+
+export const certificateTemplateModeEnum = pgEnum("certificate_template_mode", [
+  "default",
+  "custom",
+]);
+
+/**
+ * Per-event certificate design. `default` renders the built-in IEDC layout;
+ * `custom` draws the recipient's name (and optional class line) on top of an
+ * uploaded artwork. Positions are percentages of the page so a template works
+ * at any resolution or aspect ratio.
+ */
+export const eventCertificateTemplates = pgTable("event_certificate_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  eventId: uuid("event_id")
+    .notNull()
+    .unique()
+    .references(() => events.id, { onDelete: "cascade" }),
+  mode: certificateTemplateModeEnum("mode").notNull().default("default"),
+  /** Data URL of the uploaded artwork. Only read when mode = 'custom'. */
+  backgroundUrl: text("background_url"),
+  /** Heading on the built-in layout, e.g. "Certificate of Participation". */
+  heading: varchar("heading", { length: 120 }),
+  signatoryName: varchar("signatory_name", { length: 255 }),
+  signatoryDesignation: varchar("signatory_designation", { length: 255 }),
+  namePosX: integer("name_pos_x").default(50),
+  namePosY: integer("name_pos_y").default(52),
+  nameFontSize: integer("name_font_size").default(34),
+  nameColor: varchar("name_color", { length: 9 }).default("#1A0D0C"),
+  showDetailLine: boolean("show_detail_line").default(true),
+  detailPosY: integer("detail_pos_y").default(45),
+  detailFontSize: integer("detail_font_size").default(13),
+  updatedBy: uuid("updated_by").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
 // ============================================================
@@ -662,4 +722,6 @@ export type Project = typeof projects.$inferSelect;
 export type ProjectCollaboration = typeof projectCollaborations.$inferSelect;
 export type Badge = typeof badges.$inferSelect;
 export type Certificate = typeof certificates.$inferSelect;
+export type EventCertificateTemplate =
+  typeof eventCertificateTemplates.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;

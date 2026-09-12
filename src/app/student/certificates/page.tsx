@@ -220,10 +220,9 @@ export default function CertificatesPage() {
 
               <div className="space-y-2 pt-2 border-t border-gray-100/80">
                 <a
-                  href={cert.certificateUrl}
+                  href={`${cert.certificateUrl}?download=1`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  download
                   className="flex items-center justify-between w-full h-[40px] pl-5 pr-2 py-2 rounded-full text-white text-[13.5px] font-semibold tracking-[-0.4px] transition-transform active:scale-95 shadow-sm"
                   style={{
                     background:
@@ -241,7 +240,7 @@ export default function CertificatesPage() {
                   className="w-full h-[36px] rounded-full border border-gray-200 text-xs font-semibold text-[#1A0D0C] hover:bg-[#FAF6EE] hover:border-[#EAE3D2] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Eye className="w-3.5 h-3.5 text-gray-500" />
-                  <span>Preview Details</span>
+                  <span>View Certificate</span>
                 </button>
               </div>
             </div>
@@ -253,12 +252,12 @@ export default function CertificatesPage() {
             <Award className="w-10 h-10" />
           </div>
           <h3 className="text-2xl font-semibold text-[#1A0D0C] tracking-tight">
-            Coming Soon
+            No Certificates Yet
           </h3>
           <p className="text-gray-400 text-sm sm:text-base max-w-md mt-2 leading-relaxed">
             {searchQuery || activeTab !== "all"
               ? "No certificates matched your search or category filter. Try clearing filters."
-              : "The certificate engine is still being built. Your verified certificates for IEDC SJCET events and workshops will show up here once it goes live."}
+              : "You have no certificates yet. Certificates appear here automatically once you attend an IEDC SJCET event and the organisers issue them."}
           </p>
 
           <Link
@@ -279,7 +278,7 @@ export default function CertificatesPage() {
 
       {/* Certificate Preview Modal */}
       <Dialog open={!!selectedCert} onOpenChange={() => setSelectedCert(null)}>
-        <DialogContent className="sm:max-w-xl rounded-[32px] p-6 bg-white border border-gray-100 shadow-2xl space-y-5">
+        <DialogContent className="sm:max-w-3xl rounded-[32px] p-6 bg-white border border-gray-100 shadow-2xl space-y-5">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#1A0D0C] flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-[#990000]" />
@@ -326,6 +325,13 @@ export default function CertificatesPage() {
                 </div>
               </div>
 
+              {/* Live render of the issued certificate. */}
+              <iframe
+                src={selectedCert.certificateUrl}
+                title="Certificate document"
+                className="w-full h-[55vh] rounded-[20px] border border-gray-200 bg-gray-50"
+              />
+
               {/* Actions */}
               <div className="flex items-center justify-end gap-3 pt-2">
                 <a
@@ -335,14 +341,13 @@ export default function CertificatesPage() {
                   className="px-4 py-2 rounded-full border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 transition-colors"
                 >
                   <ExternalLink className="w-3.5 h-3.5 text-gray-500" />
-                  <span>Open URL</span>
+                  <span>Open in new tab</span>
                 </a>
 
                 <a
-                  href={selectedCert.certificateUrl}
+                  href={`${selectedCert.certificateUrl}?download=1`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  download
                   className="flex items-center justify-between h-[38px] pl-5 pr-2 py-2 rounded-full text-white text-[13px] font-semibold tracking-[-0.4px] transition-transform active:scale-95 shadow-sm"
                   style={{
                     background:
