@@ -9,21 +9,47 @@ Built with Next.js 16, React 19, Drizzle ORM, and Supabase Postgres.
 - **Role-based dashboards** — separate workspaces for Students, Faculty, Execom, and Nodal Officers
 - **Events & attendance** — event management with QR-based check-in
 - **Gamification** — points, badges, and a live leaderboard
-- **Projects & certificates** — project tracking and certificate generation
+- **Certificate engine** — per-event templates, one-click batch issuing, and on-demand PDF download for students
+- **Projects** — student project submission and review by faculty/Execom
 - **Analytics & reports** — engagement insights for faculty and admins
 - **Secure auth** — Better Auth with Google OAuth, scoped to a college email domain
 
 ## Tech Stack
 
 | Layer      | Technology                                  |
-| ---------- | -------------------------------------------- |
-| Framework  | Next.js 16 (App Router), React 19            |
-| Database   | Supabase (PostgreSQL) + Drizzle ORM          |
-| Auth       | Better Auth (Google OAuth)                   |
-| Styling/UI | Tailwind CSS, Radix UI, shadcn                |
-| Caching    | Upstash Redis (optional, for leaderboard)     |
-| Email      | Resend                                        |
-| Other      | Zod, React Hook Form, Zustand, Recharts       |
+| ---------- | ------------------------------------------- |
+| Framework  | Next.js 16 (App Router), React 19           |
+| Database   | Supabase (PostgreSQL) + Drizzle ORM         |
+| Auth       | Better Auth (Google OAuth)                  |
+| Styling/UI | Tailwind CSS, Radix UI, shadcn              |
+| Caching    | Upstash Redis (optional, for leaderboard)   |
+| Email      | Resend                                      |
+| PDF/Docs   | pdf-lib (certificate rendering), docx       |
+| Other      | Zod, React Hook Form, Zustand, Recharts     |
+
+## Certificate Engine
+
+Event organisers (Execom and Nodal Officers) can design a certificate per event and issue it to
+attendees in one batch. Students see their certificates under **Student → Certificates** and
+download them as PDFs.
+
+### How it works
+
+- **Templates** — each event has an optional template row. `default` renders the built-in IEDC
+  layout; `custom` draws the recipient's name (and an optional class/detail line) on top of
+  uploaded artwork. Text positions are stored as *percentages* of the page, so a template looks
+  the same at any resolution or aspect ratio.
+- **Live preview** — the template editor renders a real PDF with sample data before anything is
+  issued, so positioning, colours, and font sizes can be checked first.
+- **Batch issuing** — "Send certificates" issues to every eligible attendee for the event. A
+  unique index on `(event_id, student_id)` makes re-running it safe: it can never double-issue.
+- **Certificate numbers** — sequential and year-scoped, in the form `IEDC/<year>/00001`, reserved
+  atomically from a counter table so concurrent batches never collide.
+- **No file storage** — PDFs are never written to disk or a bucket. Each certificate is a single
+  database row, re-rendered on demand by `GET /api/certificates/:id/file`. Issuing a batch of
+  hundreds costs one insert, not hundreds of uploads.
+- **Historical accuracy** — the recipient's name and details are snapshotted at issue time, so a
+  certificate never silently changes when a student later edits their profile.
 
 ## Getting Started
 

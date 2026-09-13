@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
+import { isExecomBootcampEmail } from "@/lib/roles";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -82,6 +83,11 @@ export default function StudentOnboardingPage() {
   const [admissionNumber, setAdmissionNumber] = useState("");
   const [phone, setPhone] = useState("");
 
+  const email = session?.user?.email || "";
+  // Execom role mailboxes (e.g. ctobootcamp@sjcetpalai.ac.in) skip the batch and
+  // admission number questions — the server fills those in for them.
+  const isExecomAccount = isExecomBootcampEmail(email);
+
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -111,13 +117,11 @@ export default function StudentOnboardingPage() {
       const res = await fetch("/api/student/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          admissionNumber,
-          department,
-          batch,
-          phone,
-        }),
+        body: JSON.stringify(
+          isExecomAccount
+            ? { name, phone }
+            : { name, admissionNumber, department, batch, phone }
+        ),
       });
 
       const data = await res.json();
@@ -226,6 +230,7 @@ export default function StudentOnboardingPage() {
             </div>
 
             {/* Department */}
+            {!isExecomAccount && (
             <div className="space-y-2">
               <Label className="text-[11px] font-bold uppercase tracking-wider text-[#7A7A7A] flex items-center gap-1.5 font-['Hanken_Grotesk']">
                 <GraduationCap className="w-3.5 h-3.5 text-[#E60B09]" />
@@ -253,8 +258,10 @@ export default function StudentOnboardingPage() {
                 </SelectContent>
               </Select>
             </div>
+            )}
 
             {/* Batch */}
+            {!isExecomAccount && (
             <div className="space-y-2">
               <Label htmlFor="batch" className="text-[11px] font-bold uppercase tracking-wider text-[#7A7A7A] flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-[#E60B09]" />
@@ -269,8 +276,10 @@ export default function StudentOnboardingPage() {
                 required
               />
             </div>
+            )}
 
             {/* Admission Number */}
+            {!isExecomAccount && (
             <div className="space-y-2">
               <Label htmlFor="admissionNumber" className="text-[11px] font-bold uppercase tracking-wider text-[#7A7A7A] flex items-center gap-1.5">
                 <Hash className="w-3.5 h-3.5 text-[#E60B09]" />
@@ -285,6 +294,7 @@ export default function StudentOnboardingPage() {
                 required
               />
             </div>
+            )}
 
             {/* Phone Number */}
             <div className="space-y-2">
@@ -324,7 +334,7 @@ export default function StudentOnboardingPage() {
 
           <button
             type="submit"
-            disabled={submitting || success || !department}
+            disabled={submitting || success || (!isExecomAccount && !department)}
             className="w-full h-13 rounded-full bg-[#0F0A0A] hover:bg-[#1E1614] text-white font-semibold text-sm transition-all shadow-md hover:shadow-lg flex items-center justify-between px-6 group active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed mt-4"
           >
             {submitting ? (

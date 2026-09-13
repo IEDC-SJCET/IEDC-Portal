@@ -88,11 +88,22 @@ export function buildDynamicQRPayload(uid: string, iecdId: string, secret: strin
 export async function generateDynamicQRDataURL(uid: string, iecdId: string, secret: string): Promise<string> {
   const QRCode = (await import("qrcode")).default;
   return QRCode.toDataURL(buildDynamicQRPayload(uid, iecdId, secret), {
-    errorCorrectionLevel: "H",
+    errorCorrectionLevel: "M",
     width: 400,
-    margin: 3,
-    color: { dark: "#1a1a2e", light: "#ffffff" },
+    margin: 2,
+    color: { dark: "#100A0A", light: "#ffffff" },
   });
+}
+
+function safeEqualHex(a: string, b: string): boolean {
+  try {
+    const bufA = Buffer.from(a, "hex");
+    const bufB = Buffer.from(b, "hex");
+    if (bufA.length !== bufB.length) return false;
+    return crypto.timingSafeEqual(bufA, bufB);
+  } catch {
+    return false;
+  }
 }
 
 export function verifyDynamicQRPayload(
@@ -111,20 +122,16 @@ export function verifyDynamicQRPayload(
     }
 
     const payload: QRPayload = JSON.parse(jsonStr);
-    if (!payload.uid || !payload.iid || payload.h) {
-      if (payload.uid === undefined || payload.iid === undefined || payload.ts === undefined || payload.h === undefined) {
-        return { valid: false };
-      }
+    if (!payload.uid || !payload.iid || !payload.h || payload.ts === undefined) {
+      return { valid: false };
     }
 
     // Static QR code verification (ts === 0)
     if (payload.ts === 0) {
       const expected = hmacForWindow(payload.uid, payload.iid, storedSecret, 0);
-      const isValid = crypto.timingSafeEqual(
-        Buffer.from(payload.h, "hex"),
-        Buffer.from(expected, "hex")
-      );
-      if (isValid) return { valid: true, uid: payload.uid, iecdId: payload.iid };
+      if (safeEqualHex(payload.h, expected)) {
+        return { valid: true, uid: payload.uid, iecdId: payload.iid };
+      }
     }
 
     // Backward compatibility for dynamic windows
@@ -134,11 +141,9 @@ export function verifyDynamicQRPayload(
       if (slot !== payload.ts) continue;
 
       const expected = hmacForWindow(payload.uid, payload.iid, storedSecret, slot);
-      const isValid = crypto.timingSafeEqual(
-        Buffer.from(payload.h, "hex"),
-        Buffer.from(expected, "hex")
-      );
-      if (isValid) return { valid: true, uid: payload.uid, iecdId: payload.iid };
+      if (safeEqualHex(payload.h, expected)) {
+        return { valid: true, uid: payload.uid, iecdId: payload.iid };
+      }
     }
 
     return { valid: false };
