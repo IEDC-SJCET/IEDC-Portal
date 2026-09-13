@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, use } from "react";
+import { useState, useCallback, use } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, CheckCircle2, XCircle, ArrowLeft, Loader2, QrCode, Sparkles } from "lucide-react";
-import type { IScannerControls } from "@zxing/browser";
 import Link from "next/link";
 import { useAdminSection } from "@/lib/admin-section";
+import { Scanner, useDevices } from "@yudiel/react-qr-scanner";
+import type { IDetectedBarcode } from "@yudiel/react-qr-scanner";
 
 interface ScanResult {
   success: boolean;
@@ -22,134 +23,58 @@ export default function ExecomScanPage({ params }: { params: Promise<{ id: strin
   const [processing, setProcessing] = useState(false);
   const [lastResult, setLastResult] = useState<ScanResult | null>(null);
   const [scanCount, setScanCount] = useState(0);
-  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const controlsRef = useRef<IScannerControls | null>(null);
-  const prevDeviceIdRef = useRef("");
+  const devices = useDevices();
 
-  const processQRCode = useCallback(async (qrData: string) => {
-    if (processing) return;
-    setProcessing(true);
-    try {
-      const res = await fetch("/api/attendance/scan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId, qrData }),
-      });
-      const data = await res.json();
+  const handleScan = useCallback(
+    async (detectedCodes: IDetectedBarcode[]) => {
+      if (processing || !detectedCodes.length) return;
+      const rawText = detectedCodes[0]?.rawValue?.trim();
+      if (!rawText) return;
 
-      setLastResult({
-        success: data.success,
-        message: data.message,
-        studentName: data.studentName,
-        iecdId: data.iecdId,
-      });
-
-      if (data.success) {
-        setScanCount((prev) => prev + 1);
-        // Play success sound
-        const audio = new Audio("https://cdn.freesound.org/previews/404/404743_1427504-lq.mp3");
-        audio.play().catch(() => { });
-      } else {
-        // Play error sound
-        const audio = new Audio("https://cdn.freesound.org/previews/415/415510_5121236-lq.mp3");
-        audio.play().catch(() => { });
-      }
-    } catch {
-      setLastResult({
-        success: false,
-        message: "Failed to connect to server",
-      });
-    }
-
-    // Cool down to prevent double scans
-    setTimeout(() => {
-      setProcessing(false);
-    }, 2000);
-  }, [processing, eventId]);
-
-  const startScanning = useCallback(async () => {
-    if (!videoRef.current) return;
-    try {
-      const { BrowserQRCodeReader } = await import("@zxing/browser");
-      const codeReader = new BrowserQRCodeReader();
-
-      // Request permission and list devices
-      const videoDevices = await BrowserQRCodeReader.listVideoInputDevices();
-      setDevices(videoDevices);
-
-      let deviceId = selectedDeviceId;
-      if (!deviceId && videoDevices.length > 0) {
-        const backCam = videoDevices.find((d) =>
-          d.label.toLowerCase().includes("back") ||
-          d.label.toLowerCase().includes("rear") ||
-          d.label.toLowerCase().includes("environment")
-        );
-        deviceId = backCam ? backCam.deviceId : videoDevices[0].deviceId;
-        setSelectedDeviceId(deviceId);
-      }
-
-      const constraints: MediaStreamConstraints = {
-        video: deviceId
-          ? {
-            deviceId: { exact: deviceId },
-            advanced: [{ focusMode: "continuous" } as unknown as MediaTrackConstraintSet],
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          }
-          : {
-            facingMode: "environment",
-            advanced: [{ focusMode: "continuous" } as unknown as MediaTrackConstraintSet],
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-      };
-
-      const controls = await codeReader.decodeFromConstraints(
-        constraints,
-        videoRef.current,
-        (result) => {
-          if (result && !processing) {
-            processQRCode(result.getText());
-          }
+      // Instant haptic feedback (payment-app feel)
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        try {
+          navigator.vibrate(80);
+        } catch {
+          // Ignore if vibration is restricted
         }
-      );
-      controlsRef.current = controls;
-      setScanning(true);
-      setLastResult(null);
-    } catch {
-      alert("Unable to access camera. Please grant camera permissions or select a different camera source.");
-    }
-  }, [processing, selectedDeviceId, processQRCode]);
+      }
 
-  const stopScanning = useCallback(() => {
-    if (controlsRef.current) {
-      controlsRef.current.stop();
-      controlsRef.current = null;
-    }
-    setScanning(false);
-  }, []);
+      setProcessing(true);
+      try {
+        const res = await fetch("/api/attendance/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ eventId, qrData: rawText }),
+        });
+        const data = await res.json();
 
-  // Hot-swap camera source when dropdown changes
-  useEffect(() => {
-    if (prevDeviceIdRef.current !== selectedDeviceId && controlsRef.current) {
-      prevDeviceIdRef.current = selectedDeviceId;
-      stopScanning();
-      const timer = setTimeout(() => {
-        startScanning();
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-    prevDeviceIdRef.current = selectedDeviceId;
-  }, [selectedDeviceId, startScanning, stopScanning]);
+        setLastResult({
+          success: data.success,
+          message: data.message || (data.success ? "Marked present" : "Check-in failed"),
+          studentName: data.studentName,
+          iecdId: data.iecdId,
+        });
 
-  useEffect(() => {
-    return () => {
-      stopScanning();
-    };
-  }, [stopScanning]);
+        if (data.success) {
+          setScanCount((prev) => prev + 1);
+        }
+      } catch {
+        setLastResult({
+          success: false,
+          message: "Failed to connect to server",
+        });
+      } finally {
+        // Cooldown before processing the next scan
+        setTimeout(() => {
+          setProcessing(false);
+        }, 1500);
+      }
+    },
+    [processing, eventId]
+  );
 
   return (
     <div className="space-y-6 max-w-lg mx-auto pb-16 font-['Hanken_Grotesk'] text-[#1A0D0C]">
@@ -184,6 +109,7 @@ export default function ExecomScanPage({ params }: { params: Promise<{ id: strin
             onChange={(e) => setSelectedDeviceId(e.target.value)}
             className="w-full text-xs font-bold border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50/50 text-[#1A0D0C] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#100A0A] cursor-pointer"
           >
+            <option value="">Default (Rear Camera)</option>
             {devices.map((device, i) => (
               <option key={device.deviceId} value={device.deviceId}>
                 {device.label || `Camera ${i + 1}`}
@@ -195,70 +121,71 @@ export default function ExecomScanPage({ params }: { params: Promise<{ id: strin
 
       {/* Scanner Main Card */}
       <div className="bg-white rounded-[32px] border border-gray-100/80 overflow-hidden shadow-sm p-4 space-y-4">
-        <div
-          className="aspect-square relative bg-[#100A0A] rounded-[24px] overflow-hidden cursor-pointer shadow-inner"
-          onClick={async () => {
-            if (videoRef.current && videoRef.current.srcObject) {
-              const stream = videoRef.current.srcObject as MediaStream;
-              const track = stream.getVideoTracks()[0];
-              try {
-                await track.applyConstraints({
-                  advanced: [{ focusMode: "single-shot" } as unknown as MediaTrackConstraintSet]
-                });
-                setTimeout(() => {
-                  track.applyConstraints({
-                    advanced: [{ focusMode: "continuous" } as unknown as MediaTrackConstraintSet]
-                  }).catch(() => { });
-                }, 1000);
-              } catch (e) {
-                console.log("Manual focus not supported", e);
-              }
-            }
-          }}
-        >
-          <video
-            ref={videoRef}
-            className="w-full h-full object-cover"
-            playsInline
-            muted
-          />
-
-          {!scanning && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#100A0A]/95 text-white p-8 text-center space-y-4">
+        <div className="aspect-square relative bg-[#100A0A] rounded-[24px] overflow-hidden shadow-inner flex items-center justify-center">
+          {!scanning ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#100A0A]/95 text-white p-8 text-center space-y-4 z-10">
               <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
                 <Camera className="w-8 h-8 text-white/80" />
               </div>
               <div className="space-y-1">
                 <p className="text-base font-bold text-white">Camera Offline</p>
                 <p className="text-xs text-white/50 max-w-xs leading-relaxed">
-                  Position your camera over the student&apos;s digital IEDC QR pass. Ensure proper lighting.
+                  Position your camera over the student&apos;s digital IEDC QR pass.
                 </p>
               </div>
               <Button
-                onClick={startScanning}
+                onClick={() => {
+                  setScanning(true);
+                  setLastResult(null);
+                }}
                 className="h-[46px] px-8 rounded-full bg-white text-[#100A0A] hover:bg-gray-100 text-xs font-bold shadow-md cursor-pointer transition-all active:scale-98"
               >
                 <Camera className="w-4 h-4 mr-2" />
                 Activate Camera
               </Button>
             </div>
-          )}
+          ) : (
+            <div className="w-full h-full relative">
+              <Scanner
+                onScan={handleScan}
+                onError={(err) => {
+                  console.warn("Scanner error:", err);
+                }}
+                formats={["qr_code"]}
+                paused={processing}
+                allowMultiple={true}
+                scanDelay={1500}
+                sound={true}
+                constraints={
+                  selectedDeviceId
+                    ? { deviceId: { exact: selectedDeviceId } }
+                    : { facingMode: "environment" }
+                }
+                components={{
+                  finder: true,
+                  torch: true,
+                }}
+                styles={{
+                  container: {
+                    width: "100%",
+                    height: "100%",
+                    borderRadius: "24px",
+                    overflow: "hidden",
+                  },
+                  video: {
+                    objectFit: "cover",
+                    width: "100%",
+                    height: "100%",
+                  },
+                }}
+              />
 
-          {scanning && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className={`w-64 h-64 border-2 rounded-[28px] relative transition-colors ${processing ? 'border-emerald-400' : 'border-white/60'}`}>
-                <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-[#D9383A] rounded-tl-2xl" />
-                <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-[#D9383A] rounded-tr-2xl" />
-                <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-[#D9383A] rounded-bl-2xl" />
-                <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-[#D9383A] rounded-br-2xl" />
-              </div>
-            </div>
-          )}
-
-          {processing && (
-            <div className="absolute top-4 right-4 bg-[#100A0A]/80 backdrop-blur-md border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 shadow-lg">
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
-              <span>Verifying QR...</span>
+              {processing && (
+                <div className="absolute top-4 right-4 bg-[#100A0A]/85 backdrop-blur-md border border-white/15 text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 shadow-lg z-20 animate-in fade-in">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                  <span>Verifying QR...</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -275,7 +202,7 @@ export default function ExecomScanPage({ params }: { params: Promise<{ id: strin
               variant="outline"
               size="sm"
               className="h-9 px-4 rounded-full bg-white text-xs font-bold border-gray-200 hover:bg-gray-50 text-gray-700 cursor-pointer shadow-xs"
-              onClick={stopScanning}
+              onClick={() => setScanning(false)}
             >
               Stop Camera
             </Button>
@@ -301,12 +228,10 @@ export default function ExecomScanPage({ params }: { params: Promise<{ id: strin
             </div>
           )}
           <div className="flex-1 space-y-0.5">
-            <p className="font-extrabold text-sm tracking-tight">
-              {lastResult.message}
-            </p>
+            <p className="font-extrabold text-sm tracking-tight">{lastResult.message}</p>
             {lastResult.studentName && (
               <p className="text-xs text-emerald-700 font-bold">
-                {lastResult.studentName} {lastResult.iecdId ? `• ${lastResult.iecdId}` : ''}
+                {lastResult.studentName} {lastResult.iecdId ? `• ${lastResult.iecdId}` : ""}
               </p>
             )}
           </div>
