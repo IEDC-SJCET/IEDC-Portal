@@ -28,7 +28,8 @@ import {
   ChevronLeft,
   UserCheck,
 } from "lucide-react";
-import { generateRegistrationsDocx } from "@/lib/docx-export";
+import { generateAttendanceDocx } from "@/lib/docx-export";
+import { buildAttendanceFileName, excludeNonStudents } from "@/lib/attendance-report";
 import {
   Dialog,
   DialogContent,
@@ -132,6 +133,7 @@ export default function ExecomAnalyticsPage() {
         batch: string;
         iecdId: string;
         phone?: string | null;
+        userRole?: string | null;
       };
     }>;
   } | null>(null);
@@ -165,35 +167,28 @@ export default function ExecomAnalyticsPage() {
     if (!selectedRegEvent || !regEventData) return;
     setDownloadingDocx(true);
     try {
-      const exportList = regEventData.registrations.map((r, idx) => ({
-        slNo: idx + 1,
-        name: r.student?.name || "N/A",
-        admissionNumber: r.student?.admissionNumber || "N/A",
-        department: r.student?.department || "N/A",
-        batch: r.student?.batch || "N/A",
-        iecdId: r.student?.iecdId || "N/A",
-        phone: r.student?.phone || "N/A",
-        role: r.role || "participant",
-        attended: r.attended,
-      }));
-
-      const blob = await generateRegistrationsDocx(
+      const blob = await generateAttendanceDocx(
         {
           title: selectedRegEvent.title,
-          category: selectedRegEvent.eventType,
           startDatetime: selectedRegEvent.startDatetime,
-          venue: selectedRegEvent.venue,
-          totalRegistrations: selectedRegEvent.registrationsCount,
-          totalAttended: selectedRegEvent.attendanceCount,
         },
-        exportList
+        // Shared Execom role mailboxes and faculty are not students; Execom students stay.
+        excludeNonStudents(
+          regEventData.registrations.map((r) => ({
+            student: {
+              name: r.student?.name || "",
+              department: r.student?.department || "",
+              batch: r.student?.batch || "",
+              userRole: r.student?.userRole,
+            },
+          }))
+        )
       );
 
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      const sanitizedTitle = selectedRegEvent.title.replace(/[^a-zA-Z0-9_-]/g, "_");
-      link.download = `Registrations_${sanitizedTitle}.docx`;
+      link.download = buildAttendanceFileName(selectedRegEvent.title, "docx");
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

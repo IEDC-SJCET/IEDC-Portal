@@ -155,8 +155,6 @@ export default function EventDetailPage() {
           canExport={false}
           eventId={event.id}
           eventTitle={event.title}
-          eventType={event.eventType}
-          venue={event.venue}
           startDatetime={event.startDatetime}
         />
       )}

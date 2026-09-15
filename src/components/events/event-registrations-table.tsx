@@ -3,8 +3,25 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FileDown, FileText, Users, Loader2, Search, CheckCircle2, Clock } from "lucide-react";
+import {
+  FileDown,
+  FileText,
+  Users,
+  Loader2,
+  Search,
+  CheckCircle2,
+  Clock,
+  Eye,
+  ExternalLink,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { buildAttendanceFileName, excludeNonStudents } from "@/lib/attendance-report";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export interface Registration {
   id: string;
@@ -18,6 +35,8 @@ export interface Registration {
     iecdId: string;
     admissionNumber?: string;
     phone?: string | null;
+    /** Portal role of the account behind the profile (student, faculty, execom, nodal officer). */
+    userRole?: string | null;
   };
   attended: boolean;
 }
@@ -25,8 +44,6 @@ export interface Registration {
 export interface EventRegistrationsTableProps {
   eventId: string;
   eventTitle?: string;
-  eventType?: string;
-  venue?: string | null;
   startDatetime?: string;
   initialRegistrations?: Registration[];
   /** Volunteers may read the roster but not export it. */
@@ -36,8 +53,6 @@ export interface EventRegistrationsTableProps {
 export function EventRegistrationsTable({
   eventId,
   eventTitle = "Event",
-  eventType = "Event",
-  venue,
   startDatetime,
   initialRegistrations,
   canExport = true,
@@ -48,6 +63,8 @@ export function EventRegistrationsTable({
   const [loading, setLoading] = useState(!initialRegistrations);
   const [downloading, setDownloading] = useState(false);
   const [downloadingDocx, setDownloadingDocx] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "attended" | "registered">("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -68,6 +85,12 @@ export function EventRegistrationsTable({
 
     fetchRegistrations();
   }, [eventId]);
+
+  // A preview URL is only valid while it is held, so release it on close and on unmount.
+  useEffect(() => {
+    if (!previewUrl) return;
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
 
   const totalCount = registrations.length;
   const attendedCount = registrations.filter((r) => r.attended).length;
@@ -92,212 +115,69 @@ export function EventRegistrationsTable({
     return matchesFilter && matchesSearch;
   });
 
-  const downloadPDF = async () => {
-    const exportList = filteredRegistrations;
-    if (exportList.length === 0) return;
-    setDownloading(true);
+  const reportMeta = { title: eventTitle, startDatetime };
+  const busy = downloading || downloadingDocx || previewing;
+  // Shared Execom role mailboxes and faculty are not students, so they stay off the
+  // roster even though the table below still shows them. Students who hold an Execom
+  // title are still students and keep their row.
+  const exportList = excludeNonStudents(filteredRegistrations);
+  const canRunExport = exportList.length > 0;
+  const pdfFileName = buildAttendanceFileName(eventTitle, "pdf", statusFilter);
+
+  const buildPdf = async () => {
+    const { generateAttendancePdf } = await import("@/lib/pdf-export");
+    return generateAttendancePdf(reportMeta, exportList);
+  };
+
+  const downloadReport = async (
+    format: "pdf" | "docx",
+    setBusy: (value: boolean) => void
+  ) => {
+    if (!canRunExport) return;
+    setBusy(true);
     try {
-      const { PDFDocument, rgb, StandardFonts } = await import("pdf-lib");
-      const pdfDoc = await PDFDocument.create();
-      let page = pdfDoc.addPage([600, 800]);
-      const { height } = page.getSize();
+      const blob =
+        format === "pdf"
+          ? await buildPdf()
+          : await (
+              await import("@/lib/docx-export")
+            ).generateAttendanceDocx(reportMeta, exportList);
 
-      const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-      const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-      const drawHeader = (p: typeof page) => {
-        p.drawText(eventTitle, {
-          x: 50,
-          y: height - 60,
-          size: 18,
-          font: fontBold,
-          color: rgb(0.1, 0.1, 0.18),
-        });
-
-        const filterSuffix =
-          statusFilter === "attended"
-            ? " [Attended Only]"
-            : statusFilter === "registered"
-            ? " [Not Marked Only]"
-            : "";
-
-        const eventInfo = `Type: ${eventType.replace("_", " ").toUpperCase()}   |   Venue: ${venue || "N/A"}${filterSuffix}`;
-        p.drawText(eventInfo, {
-          x: 50,
-          y: height - 80,
-          size: 9,
-          font: fontRegular,
-          color: rgb(0.4, 0.4, 0.4),
-        });
-
-        const dateFormatted = startDatetime
-          ? `Date: ${new Date(startDatetime).toLocaleDateString("en-IN")}   |   Time: ${new Date(startDatetime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`
-          : "";
-        if (dateFormatted) {
-          p.drawText(dateFormatted, {
-            x: 50,
-            y: height - 95,
-            size: 9,
-            font: fontRegular,
-            color: rgb(0.4, 0.4, 0.4),
-          });
-        }
-
-        p.drawText("Registered Attendees List", {
-          x: 50,
-          y: height - 130,
-          size: 12,
-          font: fontBold,
-          color: rgb(0.1, 0.1, 0.18),
-        });
-
-        const tableTop = height - 150;
-        p.drawLine({
-          start: { x: 50, y: tableTop },
-          end: { x: 550, y: tableTop },
-          thickness: 1,
-          color: rgb(0.8, 0.8, 0.8),
-        });
-
-        const headers = ["Name", "Department", "Batch", "Status"];
-        const colWidths = [180, 110, 100, 110];
-        const startX = 50;
-
-        let currentX = startX;
-        for (let i = 0; i < headers.length; i++) {
-          p.drawText(headers[i], {
-            x: currentX,
-            y: tableTop - 12,
-            size: 9,
-            font: fontBold,
-            color: rgb(0.2, 0.2, 0.2),
-          });
-          currentX += colWidths[i];
-        }
-
-        p.drawLine({
-          start: { x: 50, y: tableTop - 20 },
-          end: { x: 550, y: tableTop - 20 },
-          thickness: 1,
-          color: rgb(0.8, 0.8, 0.8),
-        });
-      };
-
-      drawHeader(page);
-
-      const colWidths = [180, 110, 100, 110];
-      const startX = 50;
-      let currentY = height - 190;
-
-      for (let index = 0; index < exportList.length; index++) {
-        const reg = exportList[index];
-
-        if (currentY < 50) {
-          page = pdfDoc.addPage([600, 800]);
-          drawHeader(page);
-          currentY = height - 190;
-        }
-
-        let currentX = startX;
-
-        // Name
-        page.drawText(reg.student.name, {
-          x: currentX,
-          y: currentY,
-          size: 9,
-          font: fontRegular,
-          color: rgb(0.1, 0.1, 0.1),
-        });
-        currentX += colWidths[0];
-
-        // Dept
-        page.drawText(reg.student.department, {
-          x: currentX,
-          y: currentY,
-          size: 9,
-          font: fontRegular,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-        currentX += colWidths[1];
-
-        // Batch
-        page.drawText(reg.student.batch, {
-          x: currentX,
-          y: currentY,
-          size: 9,
-          font: fontRegular,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-        currentX += colWidths[2];
-
-        // Status
-        const statusText = reg.attended ? "Attended" : "Registered";
-        page.drawText(statusText, {
-          x: currentX,
-          y: currentY,
-          size: 9,
-          font: fontBold,
-          color: reg.attended ? rgb(0.1, 0.6, 0.2) : rgb(0.5, 0.5, 0.5),
-        });
-
-        currentY -= 20;
-      }
-
-      const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([new Uint8Array(pdfBytes)], {
-        type: "application/pdf",
-      });
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `${eventTitle.replace(/\s+/g, "_")}_${statusFilter}_Attendance.pdf`;
+      link.href = url;
+      link.download = buildAttendanceFileName(eventTitle, format, statusFilter);
       link.click();
+      // Revoking in the same tick can cancel the download, so let it start first.
+      setTimeout(() => URL.revokeObjectURL(url), 0);
     } catch (e) {
-      console.error("PDF generation failed:", e);
-      alert("Failed to generate PDF. Please try again.");
+      console.error(`${format.toUpperCase()} generation failed:`, e);
+      alert(`Failed to generate ${format.toUpperCase()}. Please try again.`);
     } finally {
-      setDownloading(false);
+      setBusy(false);
     }
   };
 
-  const downloadDOCX = async () => {
-    const exportList = filteredRegistrations;
-    if (exportList.length === 0) return;
-    setDownloadingDocx(true);
-    try {
-      const { generateRegistrationsDocx } = await import("@/lib/docx-export");
-      const blob = await generateRegistrationsDocx(
-        {
-          title: eventTitle,
-          category: eventType,
-          venue: venue,
-          startDatetime: startDatetime,
-          totalRegistrations: registrations.length,
-          totalAttended: attendedCount,
-        },
-        exportList.map((reg, idx) => ({
-          slNo: idx + 1,
-          name: reg.student.name,
-          admissionNumber: reg.student.admissionNumber || "N/A",
-          department: reg.student.department,
-          batch: reg.student.batch,
-          iecdId: reg.student.iecdId,
-          phone: reg.student.phone || "N/A",
-          role: reg.role,
-          attended: reg.attended,
-        }))
-      );
+  const downloadPDF = () => downloadReport("pdf", setDownloading);
+  const downloadDOCX = () => downloadReport("docx", setDownloadingDocx);
 
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `${eventTitle.replace(/\s+/g, "_")}_${statusFilter}_Attendance.docx`;
-      link.click();
+  /** Renders the same PDF the download produces and shows it in a modal. */
+  const openPreview = async () => {
+    if (!canRunExport) return;
+    setPreviewing(true);
+    try {
+      const blob = await buildPdf();
+      setPreviewUrl(URL.createObjectURL(blob));
     } catch (e) {
-      console.error("DOCX generation failed:", e);
-      alert("Failed to generate DOCX. Please try again.");
+      console.error("Report preview failed:", e);
+      alert("Failed to build the preview. Please try again.");
     } finally {
-      setDownloadingDocx(false);
+      setPreviewing(false);
     }
   };
+
+  // Clearing the URL closes the dialog; the effect above revokes it.
+  const closePreview = () => setPreviewUrl(null);
 
   if (loading) {
     return (
@@ -329,8 +209,20 @@ export function EventRegistrationsTable({
         {canExport && registrations.length > 0 && (
           <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
             <Button
+              onClick={openPreview}
+              disabled={busy || !canRunExport}
+              className="h-9.5 px-4 rounded-full bg-white hover:bg-gray-50 border border-gray-200 text-[#1A0D0C] text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-sm"
+            >
+              {previewing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+              <span>Preview</span>
+            </Button>
+            <Button
               onClick={downloadPDF}
-              disabled={downloading || downloadingDocx}
+              disabled={busy || !canRunExport}
               className="h-9.5 px-4 rounded-full bg-[#100A0A] hover:bg-[#2A2020] text-white text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-sm"
             >
               {downloading ? (
@@ -342,7 +234,7 @@ export function EventRegistrationsTable({
             </Button>
             <Button
               onClick={downloadDOCX}
-              disabled={downloading || downloadingDocx}
+              disabled={busy || !canRunExport}
               className="h-9.5 px-4 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-sm"
             >
               {downloadingDocx ? (
@@ -477,6 +369,58 @@ export function EventRegistrationsTable({
           </table>
         </div>
       )}
+
+      {/* Report preview — the same PDF the download button produces. */}
+      <Dialog open={!!previewUrl} onOpenChange={(open) => !open && closePreview()}>
+        <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto bg-white rounded-[32px] p-6 font-['Hanken_Grotesk'] text-[#1A0D0C]">
+          <div className="flex flex-col gap-4">
+            <div className="pr-10">
+              <DialogTitle className="text-lg font-bold text-[#1A0D0C]">
+                Attendance Report Preview
+              </DialogTitle>
+              <DialogDescription className="text-xs font-medium text-gray-400 mt-1">
+                {exportList.length} student
+                {exportList.length === 1 ? "" : "s"}
+                {statusFilter === "attended"
+                  ? " • attended only"
+                  : statusFilter === "registered"
+                  ? " • not marked only"
+                  : ""}
+              </DialogDescription>
+            </div>
+
+            {previewUrl && (
+              <iframe
+                src={previewUrl}
+                title="Attendance report preview"
+                className="w-full h-[60vh] rounded-2xl border border-gray-200 bg-gray-50"
+              />
+            )}
+
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {/* Mobile browsers will not render a PDF inside an iframe. */}
+              <a
+                href={previewUrl ?? undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-9.5 px-4 rounded-full bg-white hover:bg-gray-50 border border-gray-200 text-[#1A0D0C] text-xs font-semibold inline-flex items-center gap-2 transition-all shadow-sm"
+              >
+                <ExternalLink className="w-4 h-4" />
+                <span>Open in new tab</span>
+              </a>
+              {/* Reuses the blob already built for the preview. */}
+              <a
+                href={previewUrl ?? undefined}
+                download={pdfFileName}
+                className="h-9.5 px-4 rounded-full bg-[#100A0A] hover:bg-[#2A2020] text-white text-xs font-semibold inline-flex items-center gap-2 transition-all shadow-sm"
+              >
+                <FileDown className="w-4 h-4" />
+                <span>Download PDF</span>
+              </a>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

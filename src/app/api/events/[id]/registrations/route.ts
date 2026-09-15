@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/db";
-import { eventRegistrations, studentProfiles, eventAttendance } from "@/db/schema";
+import { eventRegistrations, studentProfiles, eventAttendance, users } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { isAdminRole } from "@/lib/roles";
@@ -63,11 +63,14 @@ export async function GET(
           batch: studentProfiles.batch,
           iecdId: studentProfiles.iecdId,
           phone: studentProfiles.phone,
+          // Portal role behind the profile, so exports can leave staff off the roster.
+          userRole: users.role,
         },
         attended: eventAttendance.id,
       })
       .from(eventRegistrations)
       .innerJoin(studentProfiles, eq(eventRegistrations.studentId, studentProfiles.id))
+      .leftJoin(users, eq(studentProfiles.userId, users.id))
       .leftJoin(
         eventAttendance,
         and(

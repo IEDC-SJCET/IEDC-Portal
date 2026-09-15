@@ -141,6 +141,21 @@ export const EXECOM_PLACEHOLDER_BATCH = "EXECOM";
 /** Department stored for Execom bootcamp accounts — they belong to no academic department. */
 export const EXECOM_PLACEHOLDER_DEPARTMENT = "EXECOM";
 
+/**
+ * True for the placeholder profile behind a shared Execom role mailbox. These are
+ * accounts, not people, so attendance rosters leave them out — unlike a real student
+ * who merely holds an Execom title, who still attends as a student.
+ */
+export function isExecomPlaceholderProfile(profile: {
+  readonly department?: string | null;
+  readonly batch?: string | null;
+}): boolean {
+  return (
+    profile.department === EXECOM_PLACEHOLDER_DEPARTMENT ||
+    profile.batch === EXECOM_PLACEHOLDER_BATCH
+  );
+}
+
 /** Deterministic, unique placeholder admission number for an Execom bootcamp account. */
 export function execomPlaceholderAdmissionNumber(email: string): string {
   const localPart = email.trim().toLowerCase().split("@")[0] ?? "";
