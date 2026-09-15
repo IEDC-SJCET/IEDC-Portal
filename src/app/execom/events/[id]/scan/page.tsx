@@ -2,7 +2,8 @@
 
 import { useState, useCallback, use } from "react";
 import { Button } from "@/components/ui/button";
-import { Camera, CheckCircle2, XCircle, ArrowLeft, Loader2, QrCode, Sparkles } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Camera, CheckCircle2, XCircle, ArrowLeft, Loader2, QrCode, Sparkles, UserCheck } from "lucide-react";
 import Link from "next/link";
 import { useAdminSection } from "@/lib/admin-section";
 import { Scanner, useDevices } from "@yudiel/react-qr-scanner";
@@ -24,6 +25,8 @@ export default function ExecomScanPage({ params }: { params: Promise<{ id: strin
   const [lastResult, setLastResult] = useState<ScanResult | null>(null);
   const [scanCount, setScanCount] = useState(0);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
+  const [manualIecdId, setManualIecdId] = useState("");
+  const [submittingManual, setSubmittingManual] = useState(false);
 
   const devices = useDevices();
 
@@ -74,6 +77,51 @@ export default function ExecomScanPage({ params }: { params: Promise<{ id: strin
       }
     },
     [processing, eventId]
+  );
+
+  const handleManualCheckIn = useCallback(
+    async (e?: React.FormEvent) => {
+      if (e) e.preventDefault();
+      const idToSubmit = manualIecdId.trim();
+      if (!idToSubmit || submittingManual) return;
+
+      setSubmittingManual(true);
+      try {
+        const res = await fetch("/api/attendance/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ eventId, iecdId: idToSubmit }),
+        });
+        const data = await res.json();
+
+        setLastResult({
+          success: data.success,
+          message: data.message || (data.success ? "Marked present" : "Check-in failed"),
+          studentName: data.studentName,
+          iecdId: data.iecdId || idToSubmit,
+        });
+
+        if (data.success) {
+          setScanCount((prev) => prev + 1);
+          setManualIecdId("");
+          if (typeof navigator !== "undefined" && navigator.vibrate) {
+            try {
+              navigator.vibrate([60, 40, 60]);
+            } catch {
+              // Ignore
+            }
+          }
+        }
+      } catch {
+        setLastResult({
+          success: false,
+          message: "Failed to connect to server",
+        });
+      } finally {
+        setSubmittingManual(false);
+      }
+    },
+    [manualIecdId, submittingManual, eventId]
   );
 
   return (
@@ -210,6 +258,38 @@ export default function ExecomScanPage({ params }: { params: Promise<{ id: strin
         )}
       </div>
 
+      {/* Manual Check-in Fallback Card */}
+      <div className="bg-white rounded-[28px] border border-gray-100/80 p-5 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <label htmlFor="manual-iedc-id" className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block flex items-center gap-1.5">
+            <UserCheck className="w-3.5 h-3.5 text-[#D9383A]" /> Manual Check-in Fallback
+          </label>
+          <span className="text-[10px] text-gray-400 font-medium">If QR cannot be scanned</span>
+        </div>
+        <form onSubmit={handleManualCheckIn} className="flex gap-2">
+          <Input
+            id="manual-iedc-id"
+            type="text"
+            placeholder="Enter IEDC ID (e.g. IEDC-24-CS-001)"
+            value={manualIecdId}
+            onChange={(e) => setManualIecdId(e.target.value.toUpperCase())}
+            disabled={submittingManual}
+            className="h-11 rounded-xl bg-gray-50/50 border-gray-200 text-xs font-bold text-[#1A0D0C] placeholder:text-gray-400 placeholder:font-normal focus-visible:ring-[#100A0A] uppercase tracking-wider"
+          />
+          <Button
+            type="submit"
+            disabled={!manualIecdId.trim() || submittingManual}
+            className="h-11 px-5 rounded-xl bg-[#100A0A] hover:bg-[#2B2B2B] text-white text-xs font-bold shrink-0 shadow-sm transition-all active:scale-98 cursor-pointer disabled:opacity-50"
+          >
+            {submittingManual ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              "Check In"
+            )}
+          </Button>
+        </form>
+      </div>
+
       {/* Result Alert Card */}
       {lastResult && (
         <div
@@ -230,7 +310,7 @@ export default function ExecomScanPage({ params }: { params: Promise<{ id: strin
           <div className="flex-1 space-y-0.5">
             <p className="font-extrabold text-sm tracking-tight">{lastResult.message}</p>
             {lastResult.studentName && (
-              <p className="text-xs text-emerald-700 font-bold">
+              <p className={`text-xs font-bold ${lastResult.success ? "text-emerald-700" : "text-red-700"}`}>
                 {lastResult.studentName} {lastResult.iecdId ? `• ${lastResult.iecdId}` : ""}
               </p>
             )}

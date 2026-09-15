@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Loader2, CheckCircle2, Edit3, QrCode } from "lucide-react";
 import Link from "next/link";
-import { EventDetail, Registration } from "./types";
+import { EventDetail } from "./types";
 import { EventHeader } from "./_components/event-header";
 import { StatusActions } from "./_components/status-actions";
 import { EventRegistrationsTable } from "@/components/events/event-registrations-table";
@@ -35,7 +35,6 @@ export default function ExecomEventDetailPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [message, setMessage] = useState("");
-  const [registrations, setRegistrations] = useState<Registration[]>([]);
 
   const { data: session } = useSession();
   const [registered, setRegistered] = useState(false);
@@ -142,11 +141,6 @@ export default function ExecomEventDetailPage() {
         setRegistered(true);
         setRegisteredRole("participant");
         setRegMessage("Successfully registered!");
-        const regRes = await fetch(`/api/events/${params.id}/registrations`);
-        if (regRes.ok) {
-          const regData = await regRes.json();
-          setRegistrations(regData.registrations || []);
-        }
       } else {
         setRegMessage(data.error || "Registration failed");
       }
@@ -177,11 +171,6 @@ export default function ExecomEventDetailPage() {
         setRegistered(false);
         setRegisteredRole(null);
         setRegMessage("Registration cancelled");
-        const regRes = await fetch(`/api/events/${params.id}/registrations`);
-        if (regRes.ok) {
-          const regData = await regRes.json();
-          setRegistrations(regData.registrations || []);
-        }
       } else {
         setRegMessage(data.error || "Failed to cancel registration");
       }
@@ -192,22 +181,15 @@ export default function ExecomEventDetailPage() {
     }
   };
 
-  // Re-pulls event totals + registrations, e.g. after the volunteer roster changes.
+  // Re-pulls event totals, e.g. after the volunteer roster changes.
   const refreshEventData = async () => {
     try {
-      const [eventRes, regRes] = await Promise.all([
-        fetch(`/api/events/${params.id}`),
-        fetch(`/api/events/${params.id}/registrations`),
-      ]);
+      const eventRes = await fetch(`/api/events/${params.id}`);
       if (eventRes.ok) {
         const data = await eventRes.json();
         setEvent(data);
         setRegistered(data.registered || false);
         setRegisteredRole(data.registeredRole || null);
-      }
-      if (regRes.ok) {
-        const regData = await regRes.json();
-        setRegistrations(regData.registrations || []);
       }
     } catch (error) {
       console.error("Failed to refresh event:", error);
@@ -217,20 +199,12 @@ export default function ExecomEventDetailPage() {
   useEffect(() => {
     async function fetchEvent() {
       try {
-        const [eventRes, regRes] = await Promise.all([
-          fetch(`/api/events/${params.id}`),
-          fetch(`/api/events/${params.id}/registrations`),
-        ]);
-
+        const eventRes = await fetch(`/api/events/${params.id}`);
         if (eventRes.ok) {
           const data = await eventRes.json();
           setEvent(data);
           setRegistered(data.registered || false);
           setRegisteredRole(data.registeredRole || null);
-        }
-        if (regRes.ok) {
-          const regData = await regRes.json();
-          setRegistrations(regData.registrations || []);
         }
       } catch (error) {
         console.error("Failed to fetch event:", error);
@@ -262,156 +236,6 @@ export default function ExecomEventDetailPage() {
       setMessage("Something went wrong");
     } finally {
       setUpdating(false);
-    }
-  };
-
-  const downloadPDF = async () => {
-    if (!event) return;
-    try {
-      const { PDFDocument, rgb, StandardFonts } = await import("pdf-lib");
-      const pdfDoc = await PDFDocument.create();
-      let page = pdfDoc.addPage([600, 800]);
-      const { height } = page.getSize();
-
-      const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-      const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-      const drawHeader = (p: typeof page) => {
-        p.drawText(event.title, {
-          x: 50,
-          y: height - 60,
-          size: 18,
-          font: fontBold,
-          color: rgb(0.1, 0.1, 0.18),
-        });
-
-        const eventInfo = `Type: ${event.eventType.replace("_", " ").toUpperCase()}   |   Venue: ${event.venue || "N/A"}`;
-        p.drawText(eventInfo, {
-          x: 50,
-          y: height - 80,
-          size: 9,
-          font: fontRegular,
-          color: rgb(0.4, 0.4, 0.4),
-        });
-
-        const dateStr = `Date: ${new Date(event.startDatetime).toLocaleDateString("en-IN")}   |   Time: ${new Date(event.startDatetime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`;
-        p.drawText(dateStr, {
-          x: 50,
-          y: height - 95,
-          size: 9,
-          font: fontRegular,
-          color: rgb(0.4, 0.4, 0.4),
-        });
-
-        p.drawText("Registered Attendees List", {
-          x: 50,
-          y: height - 130,
-          size: 12,
-          font: fontBold,
-          color: rgb(0.1, 0.1, 0.18),
-        });
-
-        const tableTop = height - 150;
-        p.drawLine({
-          start: { x: 50, y: tableTop },
-          end: { x: 550, y: tableTop },
-          thickness: 1,
-          color: rgb(0.8, 0.8, 0.8),
-        });
-
-        const headers = ["Name", "Department", "Batch", "Status"];
-        const colWidths = [180, 110, 100, 110];
-        const startX = 50;
-
-        let currentX = startX;
-        for (let i = 0; i < headers.length; i++) {
-          p.drawText(headers[i], {
-            x: currentX,
-            y: tableTop - 12,
-            size: 9,
-            font: fontBold,
-            color: rgb(0.2, 0.2, 0.2),
-          });
-          currentX += colWidths[i];
-        }
-
-        p.drawLine({
-          start: { x: 50, y: tableTop - 20 },
-          end: { x: 550, y: tableTop - 20 },
-          thickness: 1,
-          color: rgb(0.8, 0.8, 0.8),
-        });
-      };
-
-      drawHeader(page);
-
-      const colWidths = [180, 110, 100, 110];
-      const startX = 50;
-      let currentY = height - 190;
-
-      for (let index = 0; index < registrations.length; index++) {
-        const reg = registrations[index];
-
-        if (currentY < 50) {
-          page = pdfDoc.addPage([600, 800]);
-          drawHeader(page);
-          currentY = height - 190;
-        }
-
-        let currentX = startX;
-
-        // Name
-        page.drawText(reg.student.name, {
-          x: currentX,
-          y: currentY,
-          size: 9,
-          font: fontRegular,
-          color: rgb(0.1, 0.1, 0.1),
-        });
-        currentX += colWidths[0];
-
-        // Dept
-        page.drawText(reg.student.department, {
-          x: currentX,
-          y: currentY,
-          size: 9,
-          font: fontRegular,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-        currentX += colWidths[1];
-
-        // Batch
-        page.drawText(reg.student.batch, {
-          x: currentX,
-          y: currentY,
-          size: 9,
-          font: fontRegular,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-        currentX += colWidths[2];
-
-        // Status
-        const statusText = reg.attended ? "Attended" : "Registered";
-        page.drawText(statusText, {
-          x: currentX,
-          y: currentY,
-          size: 9,
-          font: fontBold,
-          color: reg.attended ? rgb(0.1, 0.6, 0.2) : rgb(0.5, 0.5, 0.5),
-        });
-
-        currentY -= 20;
-      }
-
-      const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `${event.title.replace(/\s+/g, "_")}_Attendance.pdf`;
-      link.click();
-    } catch (e) {
-      console.error("PDF generation failed:", e);
-      alert("Failed to generate PDF. Please try again.");
     }
   };
 
@@ -661,8 +485,6 @@ export default function ExecomEventDetailPage() {
             canExport={canManage}
             eventId={event.id}
             eventTitle={event.title}
-            eventType={event.eventType}
-            venue={event.venue}
             startDatetime={event.startDatetime}
           />
         </>
