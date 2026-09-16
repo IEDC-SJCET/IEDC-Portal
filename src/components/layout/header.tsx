@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Menu, X, LogOut, Search } from "lucide-react";
+import { Menu, X, LogOut, LogIn, Search } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,7 @@ import { useSession, signOut } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { fetchProfilePoints } from "@/lib/profile-cache";
 import { getRoleBadgeText, isExecomRole, isNodalOfficer } from "@/lib/roles";
+import { buildLoginUrl } from "@/lib/redirect";
 
 interface NavItem {
   label: string;
@@ -49,7 +50,9 @@ const DEFAULT_ICONS: Record<string, { bg: string; icon: string }> = {
 };
 
 function HeaderContent({ items = [], role = "user" }: HeaderProps) {
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
+  // Guests can browse the public event pages; offer them a login instead of account actions.
+  const isGuest = !isPending && !session;
   const [isOpen, setIsOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const pathname = usePathname();
@@ -138,6 +141,8 @@ function HeaderContent({ items = [], role = "user" }: HeaderProps) {
   };
 
   const currentSearch = searchParams.get("q") || "";
+  const queryString = searchParams.toString();
+  const loginHref = buildLoginUrl(queryString ? `${pathname}?${queryString}` : pathname);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -217,17 +222,26 @@ function HeaderContent({ items = [], role = "user" }: HeaderProps) {
                 </button>
               )}
 
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleOpenQRModal();
-                }}
-                className="flex items-center justify-center w-[130px] sm:w-[169px] h-[56px] px-3 sm:px-4 gap-2.5 rounded-[31px] bg-[#100A0A] text-white text-[15px] sm:text-[20px] font-normal tracking-[-0.6px] shadow-sm hover:bg-[#2A2020] active:scale-98 transition-all cursor-pointer shrink-0 z-10"
-              >
-                <span>View My QR</span>
-              </button>
+              {isGuest ? (
+                <Link
+                  href={loginHref}
+                  className="flex items-center justify-center w-[130px] sm:w-[169px] h-[56px] px-3 sm:px-4 gap-2.5 rounded-[31px] bg-[#100A0A] text-white text-[15px] sm:text-[20px] font-normal tracking-[-0.6px] shadow-sm hover:bg-[#2A2020] active:scale-98 transition-all cursor-pointer shrink-0 z-10"
+                >
+                  <span>Login</span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleOpenQRModal();
+                  }}
+                  className="flex items-center justify-center w-[130px] sm:w-[169px] h-[56px] px-3 sm:px-4 gap-2.5 rounded-[31px] bg-[#100A0A] text-white text-[15px] sm:text-[20px] font-normal tracking-[-0.6px] shadow-sm hover:bg-[#2A2020] active:scale-98 transition-all cursor-pointer shrink-0 z-10"
+                >
+                  <span>View My QR</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -425,16 +439,27 @@ function HeaderContent({ items = [], role = "user" }: HeaderProps) {
               </Link>
             )}
 
-            <button
-              onClick={() => {
-                setIsOpen(false);
-                handleSignOut();
-              }}
-              className="flex items-center gap-3 px-4 h-[44px] rounded-[30px] text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 border border-transparent hover:border-[#2B2B2B] transition-all duration-200 w-full cursor-pointer"
-            >
-              <LogOut className="w-4 h-4 shrink-0" />
-              <span>Sign Out</span>
-            </button>
+            {isGuest ? (
+              <Link
+                href={loginHref}
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-3 px-4 h-[44px] rounded-[30px] text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 border border-transparent hover:border-[#2B2B2B] transition-all duration-200 w-full cursor-pointer"
+              >
+                <LogIn className="w-4 h-4 shrink-0" />
+                <span>Login</span>
+              </Link>
+            ) : (
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  handleSignOut();
+                }}
+                className="flex items-center gap-3 px-4 h-[44px] rounded-[30px] text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 border border-transparent hover:border-[#2B2B2B] transition-all duration-200 w-full cursor-pointer"
+              >
+                <LogOut className="w-4 h-4 shrink-0" />
+                <span>Sign Out</span>
+              </button>
+            )}
           </div>
         </SheetContent>
       </Sheet>

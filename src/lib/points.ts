@@ -8,6 +8,7 @@ import {
   eventAttendance,
   eventRegistrations,
   projects,
+  users,
 } from "@/db/schema";
 import { eq, sql, and, count, desc, asc } from "drizzle-orm";
 
@@ -77,6 +78,21 @@ export async function awardPoints(params: {
       updatedAt: new Date(),
     })
     .where(eq(studentProfiles.id, studentId));
+
+  // Mirror the total onto the user row
+  const [profile] = await db
+    .select({ userId: studentProfiles.userId })
+    .from(studentProfiles)
+    .where(eq(studentProfiles.id, studentId));
+  if (profile?.userId) {
+    await db
+      .update(users)
+      .set({
+        points: sql`${users.points} + ${points}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, profile.userId));
+  }
 
   // Check badges (async, don't await)
   checkAndAwardBadges(studentId).catch(console.error);

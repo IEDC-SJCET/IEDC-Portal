@@ -113,6 +113,8 @@ export const users = pgTable(
     image: text("image"),
     role: userRoleEnum("role").notNull().default("student"),
     isActive: boolean("is_active").default(true),
+    /** Total points earned from events and other activities; shown on the leaderboard. */
+    points: integer("points").notNull().default(0),
     lastLogin: timestamp("last_login", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
@@ -120,6 +122,7 @@ export const users = pgTable(
   (table) => [
     index("idx_users_email").on(table.email),
     index("idx_users_role").on(table.role),
+    index("idx_users_points").on(table.points),
   ]
 );
 

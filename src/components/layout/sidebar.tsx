@@ -15,12 +15,14 @@ import {
   BarChart3,
   Users,
   LogOut,
+  LogIn,
   Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut, useSession } from "@/lib/auth-client";
 import { fetchProfilePoints } from "@/lib/profile-cache";
 import { getRoleBadgeText, isExecomRole, isNodalOfficer } from "@/lib/roles";
+import { buildLoginUrl } from "@/lib/redirect";
 
 interface NavItem {
   label: string;
@@ -51,7 +53,9 @@ const DEFAULT_ICONS: Record<string, { bg: string; icon: string }> = {
 export function Sidebar({ items, role }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
+  // Guests can browse the public event pages; offer them a login instead of sign out.
+  const isGuest = !isPending && !session;
 
   const [points, setPoints] = useState<number | null>(null);
 
@@ -227,13 +231,23 @@ export function Sidebar({ items, role }: SidebarProps) {
           </Link>
         )}
 
-        <button
-          onClick={handleSignOut}
-          className="flex items-center gap-3 px-4 h-[44px] rounded-[30px] text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 border border-transparent hover:border-[#2B2B2B] transition-all duration-200 w-full cursor-pointer"
-        >
-          <LogOut className="w-4 h-4 shrink-0" />
-          <span className="hidden lg:block">Sign Out</span>
-        </button>
+        {isGuest ? (
+          <Link
+            href={buildLoginUrl(pathname)}
+            className="flex items-center gap-3 px-4 h-[44px] rounded-[30px] text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 border border-transparent hover:border-[#2B2B2B] transition-all duration-200 w-full cursor-pointer"
+          >
+            <LogIn className="w-4 h-4 shrink-0" />
+            <span className="hidden lg:block">Login</span>
+          </Link>
+        ) : (
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-3 px-4 h-[44px] rounded-[30px] text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 border border-transparent hover:border-[#2B2B2B] transition-all duration-200 w-full cursor-pointer"
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            <span className="hidden lg:block">Sign Out</span>
+          </button>
+        )}
       </div>
     </aside>
   );

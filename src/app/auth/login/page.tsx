@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { signIn } from "@/lib/auth-client";
+import { getSafeRedirectPath } from "@/lib/redirect";
 import { ArrowUpRight, Loader2 } from "lucide-react";
 
 function NavbarLogo() {
@@ -66,7 +67,7 @@ function GoogleGlyph() {
 
 function LoginForm() {
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo");
+  const redirectTo = getSafeRedirectPath(searchParams.get("redirectTo"));
   const [error, setError] = useState(searchParams.get("error") || "");
   const [googleLoading, setGoogleLoading] = useState(false);
 

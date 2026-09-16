@@ -17,6 +17,8 @@ interface StudentRegistrationActionProps {
   registered: boolean;
   registeredRole?: string | null;
   registering: boolean;
+  /** Visitor opened a shared link without being signed in. */
+  isGuest?: boolean;
   message: string;
   eventStatus?: string | null;
   endDatetime?: string | null;
@@ -29,6 +31,7 @@ export function StudentRegistrationAction({
   registered,
   registeredRole,
   registering,
+  isGuest = false,
   message,
   eventStatus,
   endDatetime,
@@ -138,8 +141,13 @@ export function StudentRegistrationAction({
             className="w-full md:w-auto h-11 px-8 rounded-full bg-[#100A0A] hover:bg-[#2A2020] text-white font-medium cursor-pointer shadow-sm active:scale-98 transition-all"
           >
             {registering ? <Loader2 className="w-4 h-4 animate-spin mr-2 shrink-0" /> : null}
-            Register for Event
+            {isGuest ? "Login to Register" : "Register for Event"}
           </Button>
+        )}
+        {isGuest && !registered && (
+          <p className="mt-3 text-sm text-gray-500">
+            Sign in with your SJCET college Google account to register for this event.
+          </p>
         )}
       </div>
 

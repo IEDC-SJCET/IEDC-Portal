@@ -12,6 +12,7 @@ import {
   isExecomRole,
   isNodalOfficer,
 } from "@/lib/roles";
+import { buildLoginUrl, getSafeRedirectPath, isPublicPath } from "@/lib/redirect";
 
 const protectedRoutes: Record<string, string[]> = {
   "/student": ["student"],
@@ -24,10 +25,14 @@ const authRoutes = ["/auth/login", "/auth/register"];
 
 export async function proxy(request: NextRequest) {
   const supabaseResponse = createSupabaseClient(request);
-  const { pathname } = request.nextUrl;
+  const { pathname, search, searchParams } = request.nextUrl;
 
   // Check if this is an auth route
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
+
+  const returnTo = isAuthRoute
+    ? getSafeRedirectPath(searchParams.get("redirectTo"))
+    : getSafeRedirectPath(pathname + search);
 
   // Get session
   const session = await auth.api.getSession({
@@ -76,7 +81,9 @@ export async function proxy(request: NextRequest) {
         pathname === "/student/onboarding" || pathname === "/api/student/onboarding";
 
       if (!profile && !isOnboardingRoute) {
-        return NextResponse.redirect(new URL("/student/onboarding", request.url));
+        const onboardingUrl = new URL("/student/onboarding", request.url);
+        if (returnTo) onboardingUrl.searchParams.set("redirectTo", returnTo);
+        return NextResponse.redirect(onboardingUrl);
       }
 
       if (profile && pathname === "/student/onboarding") {
@@ -88,7 +95,7 @@ export async function proxy(request: NextRequest) {
   // If on auth route and already logged in, redirect to dashboard
   if (isAuthRoute && session) {
     const role = (session.user as Record<string, unknown>).role as string;
-    const dashboardUrl = getDashboardForRole(role);
+    const dashboardUrl = returnTo || getDashboardForRole(role);
     return NextResponse.redirect(new URL(dashboardUrl, request.url));
   }
 
@@ -102,7 +109,7 @@ export async function proxy(request: NextRequest) {
     const eventId = eventIdMatch[2];
     if (eventId !== "create") {
       if (!session) {
-        return NextResponse.redirect(new URL("/auth/login", request.url));
+        return NextResponse.redirect(new URL(buildLoginUrl(returnTo), request.url));
       }
       const role = (session.user as Record<string, unknown>).role as string;
 
@@ -155,13 +162,14 @@ export async function proxy(request: NextRequest) {
   // Check protected routes
   for (const [prefix, allowedRoles] of Object.entries(protectedRoutes)) {
     if (pathname.startsWith(prefix)) {
-      // Allow guests to view student event details page
-      if (prefix === "/student" && pathname.match(/^\/student\/events\/[a-zA-Z0-9-]+$/)) {
+      // Shared event links (listing + individual event) are viewable without an account.
+      // Registering and every other feature still require login (enforced by the APIs).
+      if (prefix === "/student" && isPublicPath(pathname)) {
         continue;
       }
 
       if (!session) {
-        return NextResponse.redirect(new URL("/auth/login", request.url));
+        return NextResponse.redirect(new URL(buildLoginUrl(returnTo), request.url));
       }
       const role = (session.user as Record<string, unknown>).role as string;
       if (!allowedRoles.includes(role)) {

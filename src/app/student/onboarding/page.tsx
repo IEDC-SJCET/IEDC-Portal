@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { isExecomBootcampEmail } from "@/lib/roles";
+import { getSafeRedirectPath } from "@/lib/redirect";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -128,7 +129,11 @@ export default function StudentOnboardingPage() {
       if (res.ok) {
         setSuccess(true);
         setTimeout(() => {
-          router.push("/student/dashboard");
+          // Return to the page that triggered onboarding (e.g. a shared event link).
+          const redirectTo = getSafeRedirectPath(
+            new URLSearchParams(window.location.search).get("redirectTo")
+          );
+          router.push(redirectTo || "/student/dashboard");
           router.refresh();
         }, 1200);
       } else {

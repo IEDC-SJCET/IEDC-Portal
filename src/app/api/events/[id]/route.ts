@@ -66,7 +66,13 @@ export async function GET(
     }
   }
 
-  const volunteers = await db
+  // This endpoint is public (shared event links), so volunteer emails are staff-only.
+  const sessionRole = session
+    ? ((session.user as Record<string, unknown>).role as string)
+    : null;
+  const canSeeVolunteers = isAdminRole(sessionRole);
+
+  const volunteers = !canSeeVolunteers ? [] : await db
     .select({ email: users.email })
     .from(eventRegistrations)
     .innerJoin(studentProfiles, eq(eventRegistrations.studentId, studentProfiles.id))
@@ -87,7 +93,7 @@ export async function GET(
     attendanceCount: attCount[0].count,
     registered: isRegistered,
     registeredRole: regRole,
-    volunteerEmails,
+    ...(canSeeVolunteers ? { volunteerEmails } : {}),
   });
 }
 
