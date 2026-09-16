@@ -10,11 +10,13 @@ import { StudentRegistrationAction } from "./_components/student-registration-ac
 import { EventRegistrationsTable } from "@/components/events/event-registrations-table";
 import { EventAnalytics } from "@/components/events/event-analytics";
 import { useSession } from "@/lib/auth-client";
+import { buildLoginUrl } from "@/lib/redirect";
 
 export default function EventDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, isPending: sessionPending } = useSession();
+  const isGuest = !sessionPending && !session;
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
@@ -41,9 +43,22 @@ export default function EventDetailPage() {
     fetchEvent();
   }, [params.id]);
 
+  // Shared links often open in a fresh tab with no in-app history to go back to.
+  const handleBack = () => {
+    const cameFromPortal =
+      document.referrer !== "" &&
+      new URL(document.referrer).origin === window.location.origin;
+    if (cameFromPortal && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/student/events");
+    }
+  };
+
   const handleRegister = async () => {
+    if (sessionPending) return;
     if (!session) {
-      router.push(`/auth/login?redirectTo=/student/events/${params.id}`);
+      router.push(buildLoginUrl(`/student/events/${params.id}`));
       return;
     }
     setRegistering(true);
@@ -110,7 +125,7 @@ export default function EventDetailPage() {
         <Button
           variant="outline"
           className="mt-4 rounded-xl cursor-pointer"
-          onClick={() => router.back()}
+          onClick={handleBack}
         >
           Go back
         </Button>
@@ -122,7 +137,7 @@ export default function EventDetailPage() {
     <div className="max-w-3xl space-y-6 font-['Hanken_Grotesk'] text-[#1A0D0C]">
       {/* Back button */}
       <button
-        onClick={() => router.back()}
+        onClick={handleBack}
         className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#1a1a2e] transition-colors cursor-pointer"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -136,6 +151,7 @@ export default function EventDetailPage() {
         registered={registered}
         registeredRole={registeredRole}
         registering={registering}
+        isGuest={isGuest}
         message={message}
         eventStatus={event.status}
         endDatetime={event.endDatetime}
