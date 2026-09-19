@@ -21,7 +21,14 @@ export async function POST(
 
   const { id: eventId } = await params;
   const body = await request.json().catch(() => ({}));
-  const role = (body.role as string) || "participant";
+
+  const requestedRole = (body.role as string | undefined) || "participant";
+  if (requestedRole !== "participant") {
+    return NextResponse.json(
+      { error: "Volunteers are assigned by the Execom team, not self-selected." },
+      { status: 403 }
+    );
+  }
 
   // Get student profile
   let [profile] = await db
@@ -134,7 +141,7 @@ export async function POST(
     [registration] = await db
       .update(eventRegistrations)
       .set({
-        role: role as "participant" | "volunteer",
+        role: "participant",
         registeredAt: new Date(),
         cancellationReason: null,
         cancelledAt: null,
@@ -147,7 +154,7 @@ export async function POST(
       .values({
         eventId,
         studentId: profile.id,
-        role: role as "participant" | "volunteer",
+        role: "participant",
       })
       .returning();
   }

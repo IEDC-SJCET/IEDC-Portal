@@ -35,6 +35,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Invalid profile ID format" }, { status: 400 });
     }
 
+    const viewer = await getSession();
+    if (!targetId && !viewer) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const [profile] = await db
       .select()
       .from(studentProfiles)
@@ -66,9 +71,20 @@ export async function GET(request: Request) {
       if (!userPhoto && u?.image) userPhoto = u.image;
     }
 
-    const { qrHmacSecret, isDeleted, ...safe } = profile;
+    const {
+      qrHmacSecret,
+      qrCodeUrl,
+      isDeleted,
+      phone,
+      admissionNumber,
+      ...safe
+    } = profile;
+
     return NextResponse.json({
       ...safe,
+      // The leaderboard's profile card shows the admission number to signed-in
+      // students; a shared public link must not carry it.
+      ...(viewer ? { admissionNumber } : {}),
       id: profile.id,
       photoUrl: userPhoto || null,
       role: userRole,
