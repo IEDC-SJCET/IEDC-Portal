@@ -263,6 +263,7 @@ export const facultyProfiles = pgTable("faculty_profiles", {
   department: varchar("department", { length: 100 }),
   designation: varchar("designation", { length: 100 }),
   phone: varchar("phone", { length: 15 }),
+  bio: text("bio"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 

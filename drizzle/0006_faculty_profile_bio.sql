@@ -1,0 +1,1 @@
+ALTER TABLE "faculty_profiles" ADD COLUMN "bio" text;
