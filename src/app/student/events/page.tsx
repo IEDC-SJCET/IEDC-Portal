@@ -15,6 +15,21 @@ const FILTER_ITEMS = [
   { key: "completed", label: "Completed" },
 ];
 
+const TAB_EVENT_TYPES: Record<string, string[]> = {
+  techy_pedia: ["techy_pedia"],
+  wednesday_cafe: ["wednesday_cafe"],
+  hackathon: ["hackathon"],
+  gbm: ["gbm"],
+  tech_events: ["workshop", "seminar", "bootcamp"],
+};
+
+const LEGACY_TAB_TITLES: Record<string, string[]> = {
+  techy_pedia: ["techy pedia", "techypedia"],
+  wednesday_cafe: ["wednesday cafe", "wednesdaycafe"],
+  hackathon: ["hackathon"],
+  gbm: ["gbm"],
+};
+
 function StudentEventsContent() {
   const searchParams = useSearchParams();
   const [events, setEvents] = useState<EventCardProps[]>([]);
@@ -107,26 +122,11 @@ function StudentEventsContent() {
 
     let matchesTab = activeTab === "all";
     if (!matchesTab) {
-      if (activeTabLower === "techy_pedia") {
-        matchesTab =
-          eventTypeLower.includes("techy") || titleLower.includes("techy pedia");
-      } else if (activeTabLower === "wednesday_cafe") {
-        matchesTab =
-          eventTypeLower.includes("wednesday") ||
-          titleLower.includes("wednesday cafe");
-      } else if (activeTabLower === "hackathon") {
-        matchesTab =
-          eventTypeLower.includes("hackathon") || titleLower.includes("hackathon");
-      } else if (activeTabLower === "gbm") {
-        matchesTab = eventTypeLower.includes("gbm") || titleLower.includes("gbm");
-      } else if (activeTabLower === "tech_events") {
-        matchesTab =
-          eventTypeLower.includes("tech") ||
-          eventTypeLower.includes("workshop") ||
-          eventTypeLower.includes("seminar") ||
-          eventTypeLower.includes("bootcamp") ||
-          titleLower.includes("tech");
-      }
+      matchesTab =
+        (TAB_EVENT_TYPES[activeTabLower] ?? []).includes(eventTypeLower) ||
+        (LEGACY_TAB_TITLES[activeTabLower] ?? []).some((t) =>
+          titleLower.includes(t)
+        );
     }
 
     const matchesSearch = event.title

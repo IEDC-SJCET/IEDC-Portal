@@ -84,22 +84,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const { volunteerEmails, eventType, ...eventData } = parsed.data;
-
-  const dbEventType =
-    eventType === "techy_pedia"
-      ? "workshop"
-      : eventType === "wednesday_cafe"
-        ? "seminar"
-        : eventType === "gbm"
-          ? "competition"
-          : (eventType as "workshop" | "hackathon" | "bootcamp" | "seminar" | "competition" | "innovation_challenge");
+  const { volunteerEmails, ...eventData } = parsed.data;
 
   const [event] = await db
     .insert(events)
     .values({
       ...eventData,
-      eventType: dbEventType,
       startDatetime: new Date(parsed.data.startDatetime),
       endDatetime: new Date(parsed.data.endDatetime),
       registrationDeadline: parsed.data.registrationDeadline

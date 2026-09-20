@@ -51,6 +51,9 @@ export const eventTypeEnum = pgEnum("event_type", [
   "seminar",
   "competition",
   "innovation_challenge",
+  "techy_pedia",
+  "wednesday_cafe",
+  "gbm",
 ]);
 
 export const eventStatusEnum = pgEnum("event_status", [

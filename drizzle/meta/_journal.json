@@ -36,6 +36,13 @@
       "when": 1789557394725,
       "tag": "0004_user_points",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789876695830,
+      "tag": "0005_event_type_iedc_categories",
+      "breakpoints": true
     }
   ]
 }

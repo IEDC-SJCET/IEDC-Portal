@@ -337,6 +337,9 @@ export default function ExecomEventDetailPage() {
                   <SelectItem value="seminar">Seminar</SelectItem>
                   <SelectItem value="competition">Competition</SelectItem>
                   <SelectItem value="innovation_challenge">Innovation Challenge</SelectItem>
+                  <SelectItem value="techy_pedia">Techy Pedia</SelectItem>
+                  <SelectItem value="wednesday_cafe">Wednesday Cafe</SelectItem>
+                  <SelectItem value="gbm">GBM</SelectItem>
                 </SelectContent>
               </Select>
             </div>
