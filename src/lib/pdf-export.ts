@@ -14,6 +14,10 @@ import {
   loadWatermark,
   resolveEventDate,
 } from "@/lib/attendance-report";
+import { sanitizeForPdf } from "@/lib/pdf-text";
+
+/** Stands in for a value the sheet cannot print, as `buildAttendanceRows` does. */
+const DASH = "-";
 
 /** The spec measures everything in dxa; PDF points are twenty times coarser. */
 const pt = (dxa: number) => dxa / 20;
@@ -97,9 +101,14 @@ function drawCellText(
 ) {
   if (!text) return;
 
+  // Names, departments and batches are user input; the standard fonts cannot encode
+  // anything outside WinAnsi and throw rather than skip, which would fail the whole
+  // roster. A value that sanitises away entirely leaves a dash to be filled by hand.
+  const safe = sanitizeForPdf(text) || DASH;
+
   const available = COLUMN_WIDTHS[columnIndex] - CELL_MARGIN * 2;
   const left = COLUMN_EDGES[columnIndex] + CELL_MARGIN;
-  const lines = wrapText(text, font, available, maxLines);
+  const lines = wrapText(safe, font, available, maxLines);
 
   // Word bottom-aligns cells, so the last line sits just above the row's lower border.
   lines.forEach((line, lineIndex) => {
@@ -147,7 +156,8 @@ export async function generateAttendancePdf(
     }
   }
 
-  const heading = buildAttendanceHeading(meta);
+  // The event title reaches the header verbatim, so it is sanitised the same way.
+  const heading = sanitizeForPdf(buildAttendanceHeading(meta));
   const rows = buildAttendanceRows(registrations, resolveEventDate(meta));
   const pageCount = Math.max(1, Math.ceil(rows.length / ROWS_PER_PAGE));
 
