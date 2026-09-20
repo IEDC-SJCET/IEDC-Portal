@@ -30,8 +30,9 @@ const eventTypeColors: Record<string, string> = {
   seminar: "#047857",
   competition: "#B91C1C",
   innovation_challenge: "#B45309",
-  "techy pedia": "#D9383A",
-  "wednesday cafe": "#0284C7",
+  techy_pedia: "#D9383A",
+  wednesday_cafe: "#0284C7",
+  gbm: "#7C2D12",
 };
 
 export function formatCategoryName(type: string): string {

@@ -239,7 +239,57 @@ export async function PUT(request: Request) {
   const role = (session.user as Record<string, unknown>).role as string;
   const body = await request.json();
 
-  if (role === "student" || role === "faculty" || isAdminRole(role)) {
+  if (role === "faculty") {
+    if (typeof body.name === "string" && body.name.trim()) {
+      await db
+        .update(users)
+        .set({ name: body.name.trim() })
+        .where(eq(users.id, session.user.id));
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (typeof body.name === "string" && body.name.trim()) updateData.name = body.name.trim();
+    if (typeof body.phone === "string") updateData.phone = body.phone.trim() || null;
+    if (typeof body.bio === "string") updateData.bio = body.bio.trim() || null;
+    if (typeof body.department === "string" && body.department.trim()) {
+      updateData.department = body.department.trim();
+    }
+    if (typeof body.designation === "string") {
+      updateData.designation = body.designation.trim() || null;
+    }
+
+    let [profile] = await db
+      .select()
+      .from(facultyProfiles)
+      .where(eq(facultyProfiles.userId, session.user.id));
+
+    if (!profile) {
+      [profile] = await db
+        .insert(facultyProfiles)
+        .values({
+          userId: session.user.id,
+          name: (updateData.name as string) || session.user.name,
+          phone: (updateData.phone as string | null) ?? "",
+          department: (updateData.department as string | null) ?? "",
+          designation: (updateData.designation as string | null) ?? "",
+          bio: (updateData.bio as string | null) ?? null,
+        })
+        .returning();
+    } else if (Object.keys(updateData).length > 0) {
+      // Drizzle rejects an empty `set()`, so only update when there is something
+      // to write; an edit that changed nothing still returns the current profile.
+      [profile] = await db
+        .update(facultyProfiles)
+        .set(updateData)
+        .where(eq(facultyProfiles.userId, session.user.id))
+        .returning();
+    }
+
+    const { id, userId, ...safe } = profile;
+    return NextResponse.json({ ...safe, role, email: session.user.email });
+  }
+
+  if (role === "student" || isAdminRole(role)) {
     if (body.name && typeof body.name === "string" && body.name.trim()) {
       await db
         .update(users)
@@ -290,7 +340,7 @@ export async function PUT(request: Request) {
         .where(eq(studentProfiles.userId, session.user.id))
         .returning();
       profile = updated;
-    } else if (role !== "faculty") {
+    } else {
       const roleUpper = role.toUpperCase();
       const newIecdId = await generateIEDCId(roleUpper, 2026);
       const [inserted] = await db
