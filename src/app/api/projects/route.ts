@@ -5,6 +5,7 @@ import { projects, studentProfiles, projectTeamMembers } from "@/db/schema";
 import { eq, desc, and, or, isNull } from "drizzle-orm";
 import { createProjectSchema } from "@/lib/validators";
 import { NextResponse } from "next/server";
+import { isAdminRole } from "@/lib/roles";
 
 async function getSession() {
   return await auth.api.getSession({ headers: await headers() });
@@ -14,15 +15,22 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const page = parseInt(searchParams.get("page") || "0");
   const limit = parseInt(searchParams.get("limit") || "50");
-  const status = searchParams.get("status") || "all";
+  const requestedStatus = searchParams.get("status") || "all";
   const my = searchParams.get("my") === "true";
 
-  if (my) {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  // Every projects listing is account-only: the rows carry the submitter's
+  // name, department and (for staff) their admission number and IEDC ID.
+  // API routes sit outside the proxy matcher, so this is the only guard.
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
+  const role = (session.user as Record<string, unknown>).role as string;
+  /** Execom, the Nodal Officer and faculty review submissions; students browse them. */
+  const isStaff = isAdminRole(role) || role === "faculty";
+
+  if (my) {
     const [profile] = await db
       .select()
       .from(studentProfiles)
@@ -47,6 +55,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ projects: projectsList, page, limit });
   }
+
+  const status = isStaff ? requestedStatus : "approved";
 
   const whereConditions = [
     or(eq(projects.isDeleted, false), isNull(projects.isDeleted)),
@@ -78,9 +88,13 @@ export async function GET(request: Request) {
       submittedBy: projects.submittedBy,
       studentName: studentProfiles.name,
       department: studentProfiles.department,
-      admissionNumber: studentProfiles.admissionNumber,
-      iecdId: studentProfiles.iecdId,
-      batch: studentProfiles.batch,
+      ...(isStaff
+        ? {
+          admissionNumber: studentProfiles.admissionNumber,
+          iecdId: studentProfiles.iecdId,
+          batch: studentProfiles.batch,
+        }
+        : {}),
     })
     .from(projects)
     .leftJoin(studentProfiles, eq(projects.submittedBy, studentProfiles.id))

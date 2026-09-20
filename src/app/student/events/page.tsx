@@ -62,7 +62,7 @@ function StudentEventsContent() {
                 };
               }
             );
-            setEvents(apiEvents);
+            setEvents(apiEvents.filter((e) => e.status !== "draft"));
           }
         }
       } catch (error) {
