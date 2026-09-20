@@ -7,6 +7,7 @@ import { updateEventSchema } from "@/lib/validators";
 import { NextResponse } from "next/server";
 import { awardPoints } from "@/lib/points";
 import { isAdminRole } from "@/lib/roles";
+import { getEventAccess } from "@/lib/event-access";
 
 async function getSession() {
   return await auth.api.getSession({ headers: await headers() });
@@ -25,6 +26,15 @@ export async function GET(
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
+  const session = await getSession();
+
+  if (event.status === "draft") {
+    const access = await getEventAccess(session, id);
+    if (!access.canView) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+  }
+
   const regCount = await db
     .select({ count: count() })
     .from(eventRegistrations)
@@ -40,7 +50,6 @@ export async function GET(
     .from(eventAttendance)
     .where(eq(eventAttendance.eventId, id));
 
-  const session = await getSession();
   let isRegistered = false;
   let regRole: string | null = null;
   if (session) {

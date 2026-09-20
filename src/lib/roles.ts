@@ -68,6 +68,17 @@ export function isAdminRole(role: string | null | undefined): boolean {
   return isExecomRole(role) || isNodalOfficer(role);
 }
 
+/**
+ * Draft events are internal planning records, not announcements. Only staff —
+ * Execom, the Nodal Officer, and faculty reviewers, whose events screen has a
+ * dedicated "Draft" tab — may see them. Students and signed-out visitors must
+ * never be served one: `/student/events` and `/student/events/<id>` are public
+ * paths (see `isPublicPath`), so anything they can read reaches the whole web.
+ */
+export function canViewDraftEvents(role: string | null | undefined): boolean {
+  return isAdminRole(role) || role === "faculty";
+}
+
 /** Landing route for a role after login or a failed authorization check. */
 export function getDashboardForRole(role: string | null | undefined): string {
   if (isNodalOfficer(role)) return "/nodal/analytics";

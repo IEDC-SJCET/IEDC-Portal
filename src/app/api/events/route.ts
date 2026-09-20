@@ -2,17 +2,18 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/db";
 import { events, eventRegistrations, studentProfiles, users } from "@/db/schema";
-import { eq, desc, and, sql, count, inArray, gte, or, notInArray } from "drizzle-orm";
+import { eq, ne, desc, and, sql, count, inArray, gte, or, notInArray } from "drizzle-orm";
 import { createEventSchema } from "@/lib/validators";
 import { NextResponse } from "next/server";
 import { awardPoints } from "@/lib/points";
-import { isAdminRole } from "@/lib/roles";
+import { canViewDraftEvents, getRoleFromSession, isAdminRole } from "@/lib/roles";
 
 async function getSession() {
   return await auth.api.getSession({ headers: await headers() });
 }
 
 export async function GET(request: Request) {
+  const session = await getSession();
   const { searchParams } = new URL(request.url);
   const page = parseInt(searchParams.get("page") || "0");
   const limit = parseInt(searchParams.get("limit") || "10");
@@ -31,6 +32,10 @@ export async function GET(request: Request) {
     conditions.push(inArray(events.status, ["published", "ongoing", "draft"]));
   } else if (status !== "all") {
     conditions.push(eq(events.status, status as "draft" | "published" | "ongoing" | "completed" | "cancelled"));
+  }
+
+  if (!canViewDraftEvents(getRoleFromSession(session))) {
+    conditions.push(ne(events.status, "draft"));
   }
 
   const eventsList = await db
