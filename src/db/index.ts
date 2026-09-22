@@ -10,8 +10,8 @@ if (connectionString.includes("[YOUR-PASSWORD]") || connectionString.includes("[
 
 const client = postgres(connectionString, {
   prepare: false,
-  onnotice: () => { }, // Suppress benign postgres notices like column exists
-  max: 1, // Serverless: cap per-instance connections so fan-out doesn't exhaust Supabase's pooler
+  onnotice: () => { },
+  max: 10,
 });
 
 export const db = drizzle(client, { schema });
