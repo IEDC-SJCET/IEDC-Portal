@@ -11,6 +11,7 @@ import {
   renderCertificatePdf,
 } from "@/lib/certificate";
 import { loadTemplateConfig } from "@/lib/certificate-service";
+import { isUUID } from "@/lib/request";
 
 /**
  * Streams one certificate as a PDF, rendered on the fly from its database row.
@@ -28,6 +29,10 @@ export async function GET(
   }
 
   const { id } = await params;
+
+  if (!isUUID(id)) {
+    return NextResponse.json({ error: "Certificate not found" }, { status: 404 });
+  }
 
   try {
     const [record] = await db

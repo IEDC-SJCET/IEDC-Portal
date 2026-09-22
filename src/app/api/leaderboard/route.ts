@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { studentProfiles, pointsLog, users } from "@/db/schema";
 import { desc, eq, gte, and, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { parsePagination } from "@/lib/request";
 import {
   getRedis,
   leaderboardKey,
@@ -164,8 +165,7 @@ export async function GET(request: Request) {
   const rawScope = searchParams.get("scope") ?? "overall";
   const scope: LeaderboardScope =
     rawScope === "monthly" || rawScope === "weekly" ? rawScope : "overall";
-  const page = parseInt(searchParams.get("page") ?? "0");
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "50"), 200);
+  const { page, limit } = parsePagination(searchParams, 50, 200);
   const offset = page * limit;
 
   // 1. Try Redis

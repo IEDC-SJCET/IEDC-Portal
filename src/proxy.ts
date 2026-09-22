@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { createClient as createSupabaseClient } from "@/utils/supabase/middleware";
 import { db } from "@/db";
 import { studentProfiles, allowedStaffEmails, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -24,7 +23,6 @@ const protectedRoutes: Record<string, string[]> = {
 const authRoutes = ["/auth/login", "/auth/register"];
 
 export async function proxy(request: NextRequest) {
-  const supabaseResponse = createSupabaseClient(request);
   const { pathname, search, searchParams } = request.nextUrl;
 
   // Check if this is an auth route
@@ -40,6 +38,9 @@ export async function proxy(request: NextRequest) {
   });
 
   // If session is present, process automatic role updates & onboarding redirects
+  let role = session
+    ? ((session.user as Record<string, unknown>).role as string)
+    : undefined;
   if (session) {
     const email = session.user.email;
     const isCollegeEmail =
@@ -50,8 +51,6 @@ export async function proxy(request: NextRequest) {
         new URL("/auth/login?error=Only SJCET college email IDs are allowed.", request.url)
       );
     }
-
-    let role = (session.user as Record<string, unknown>).role as string;
 
     // 1. Auto-update whitelisted staff role upon first request/login
     //    Staff use top-level @sjcetpalai.ac.in accounts; students use @<dept>.sjcetpalai.ac.in.
@@ -94,8 +93,7 @@ export async function proxy(request: NextRequest) {
 
   // If on auth route and already logged in, redirect to dashboard
   if (isAuthRoute && session) {
-    const role = (session.user as Record<string, unknown>).role as string;
-    const dashboardUrl = returnTo || getDashboardForRole(role);
+    const dashboardUrl = returnTo || getDashboardForRole(role!);
     return NextResponse.redirect(new URL(dashboardUrl, request.url));
   }
 
@@ -155,7 +153,7 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(new URL("/auth/login?error=Forbidden", request.url));
       }
 
-      return supabaseResponse;
+      return NextResponse.next();
     }
   }
 
@@ -186,7 +184,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return supabaseResponse;
+  return NextResponse.next();
 }
 
 export const config = {

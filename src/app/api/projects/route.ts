@@ -6,6 +6,7 @@ import { eq, desc, and, or, isNull } from "drizzle-orm";
 import { createProjectSchema } from "@/lib/validators";
 import { NextResponse } from "next/server";
 import { isAdminRole } from "@/lib/roles";
+import { parsePagination } from "@/lib/request";
 
 async function getSession() {
   return await auth.api.getSession({ headers: await headers() });
@@ -13,8 +14,7 @@ async function getSession() {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const page = parseInt(searchParams.get("page") || "0");
-  const limit = parseInt(searchParams.get("limit") || "50");
+  const { page, limit } = parsePagination(searchParams, 50);
   const requestedStatus = searchParams.get("status") || "all";
   const my = searchParams.get("my") === "true";
 

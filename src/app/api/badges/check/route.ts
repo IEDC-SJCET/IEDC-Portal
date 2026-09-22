@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { checkAndAwardBadges } from "@/lib/points";
 import { isAdminRole } from "@/lib/roles";
+import { isUUID } from "@/lib/request";
 
 async function getSession() {
   return await auth.api.getSession({ headers: await headers() });
@@ -41,6 +42,9 @@ export async function POST(request: Request) {
         { error: "studentId required for execom badge check" },
         { status: 400 }
       );
+    }
+    if (!isUUID(targetStudentId)) {
+      return NextResponse.json({ error: "Invalid studentId format" }, { status: 400 });
     }
     studentId = targetStudentId;
   } else {

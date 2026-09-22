@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/db";
 import { eventAttendance, eventRegistrations, studentProfiles, events, pointsLog } from "@/db/schema";
-import { eq, and, isNull, ilike } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import { verifyDynamicQRPayload, decryptPayload } from "@/lib/qr";
 import { awardPoints } from "@/lib/points";
 import { NextResponse } from "next/server";
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     const [foundStudent] = await db
       .select()
       .from(studentProfiles)
-      .where(ilike(studentProfiles.iecdId, targetIecdId));
+      .where(eq(sql`lower(${studentProfiles.iecdId})`, targetIecdId.toLowerCase()));
 
     if (!foundStudent) {
       return NextResponse.json({ success: false, message: "Student not found with this IEDC ID" }, { status: 404 });
@@ -89,7 +89,7 @@ export async function POST(request: Request) {
     const [foundStudent] = await db
       .select()
       .from(studentProfiles)
-      .where(ilike(studentProfiles.iecdId, parsed.iid));
+      .where(eq(sql`lower(${studentProfiles.iecdId})`, parsed.iid.toLowerCase()));
 
     if (!foundStudent) {
       return NextResponse.json({ success: false, message: "Student not found" }, { status: 404 });

@@ -11,8 +11,7 @@ if (connectionString.includes("[YOUR-PASSWORD]") || connectionString.includes("[
 const client = postgres(connectionString, {
   prepare: false,
   onnotice: () => { }, // Suppress benign postgres notices like column exists
+  max: 1, // Serverless: cap per-instance connections so fan-out doesn't exhaust Supabase's pooler
 });
-
-client`ALTER TABLE "student_profiles" ADD COLUMN IF NOT EXISTS "behance_url" text;`.catch(() => { });
 
 export const db = drizzle(client, { schema });

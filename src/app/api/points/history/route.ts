@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { pointsLog, studentProfiles } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { parsePagination } from "@/lib/request";
 
 export async function GET(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -12,8 +13,7 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const page = parseInt(searchParams.get("page") || "0");
-  const limit = parseInt(searchParams.get("limit") || "20");
+  const { page, limit } = parsePagination(searchParams, 20);
 
   const [profile] = await db
     .select()

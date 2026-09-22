@@ -1,21 +1,28 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { PHASE_PRODUCTION_BUILD } from "next/constants";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 
-const getBaseURL = () => {
-  if (process.env.BETTER_AUTH_URL) {
-    return process.env.BETTER_AUTH_URL;
-  }
-  return {
-    allowedHosts: ["*"],
-    fallback: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-  };
-};
+// Never derive the base URL from the (attacker-controllable) request Host
+// header — always resolve to a fixed, trusted origin.
+const getBaseURL = () =>
+  process.env.BETTER_AUTH_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "http://localhost:3000";
+
+// `next build` instantiates this module without runtime env vars present, so
+// only the build phase may fall back to the placeholder secret; any real
+// runtime (dev/start/serverless) without BETTER_AUTH_SECRET fails loudly
+// instead of silently signing sessions with a secret baked into the repo.
+const authSecret = process.env.BETTER_AUTH_SECRET;
+if (!authSecret && process.env.NEXT_PHASE !== PHASE_PRODUCTION_BUILD) {
+  throw new Error("BETTER_AUTH_SECRET environment variable is required.");
+}
 
 export const auth = betterAuth({
   secret:
-    process.env.BETTER_AUTH_SECRET ||
+    authSecret ||
     "a-temporary-secure-fallback-secret-for-production-build-time-only-32-chars",
   baseURL: getBaseURL(),
   database: drizzleAdapter(db, {
