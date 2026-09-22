@@ -7,6 +7,7 @@ import { createEventSchema } from "@/lib/validators";
 import { NextResponse } from "next/server";
 import { awardPoints } from "@/lib/points";
 import { canViewDraftEvents, getRoleFromSession, isAdminRole } from "@/lib/roles";
+import { parsePagination } from "@/lib/request";
 
 async function getSession() {
   return await auth.api.getSession({ headers: await headers() });
@@ -15,8 +16,7 @@ async function getSession() {
 export async function GET(request: Request) {
   const session = await getSession();
   const { searchParams } = new URL(request.url);
-  const page = parseInt(searchParams.get("page") || "0");
-  const limit = parseInt(searchParams.get("limit") || "10");
+  const { page, limit } = parsePagination(searchParams, 10);
   const status = searchParams.get("status") || "published";
   const upcomingParam = searchParams.get("upcoming");
 

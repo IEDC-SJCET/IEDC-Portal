@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { createClient as createSupabaseClient } from "@/utils/supabase/middleware";
 import { db } from "@/db";
 import { studentProfiles, allowedStaffEmails, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -24,7 +23,6 @@ const protectedRoutes: Record<string, string[]> = {
 const authRoutes = ["/auth/login", "/auth/register"];
 
 export async function proxy(request: NextRequest) {
-  const supabaseResponse = createSupabaseClient(request);
   const { pathname, search, searchParams } = request.nextUrl;
 
   // Check if this is an auth route
@@ -155,7 +153,7 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(new URL("/auth/login?error=Forbidden", request.url));
       }
 
-      return supabaseResponse;
+      return NextResponse.next();
     }
   }
 
@@ -186,7 +184,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return supabaseResponse;
+  return NextResponse.next();
 }
 
 export const config = {
