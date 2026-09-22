@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { ArrowUpRight, X } from "lucide-react";
+import { ArrowUpRight, Check, X } from "lucide-react";
 import Link from "next/link";
 import { useId } from "react";
 
@@ -21,6 +21,7 @@ export interface EventCardProps {
   posterUrl?: string | null;
   description?: string | null;
   isClosed?: boolean;
+  registered?: boolean;
 }
 
 const eventTypeColors: Record<string, string> = {
@@ -57,6 +58,7 @@ export function EventCard({
   posterUrl,
   description,
   isClosed,
+  registered,
 }: EventCardProps) {
   const uniqueClipId = useId().replace(/:/g, "_");
   const clipId = `event-card-clip-${id || uniqueClipId}`;
@@ -157,6 +159,10 @@ export function EventCard({
           {closed ? (
             <span className="inline-flex items-center justify-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#A5A5A5] text-white text-[10px] sm:text-[13px] font-medium shrink-0 w-fit">
               {closedLabel} <X className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            </span>
+          ) : registered ? (
+            <span className="inline-flex items-center justify-center gap-1 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-emerald-600 text-white text-[10px] sm:text-[13px] font-medium shrink-0 w-fit">
+              Registered <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </span>
           ) : (
             <span className="inline-flex items-center justify-center gap-1 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-[#100A0A] text-white text-[10px] sm:text-[13px] font-medium group-hover:bg-[#2A2020] transition-colors shrink-0 w-fit">

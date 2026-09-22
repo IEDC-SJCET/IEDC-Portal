@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/db";
 import { events, eventRegistrations, studentProfiles, users } from "@/db/schema";
-import { eq, ne, desc, and, sql, count, inArray, gte, or, notInArray } from "drizzle-orm";
+import { eq, ne, desc, and, sql, count, inArray, gte, or, notInArray, isNull } from "drizzle-orm";
 import { createEventSchema } from "@/lib/validators";
 import { NextResponse } from "next/server";
 import { awardPoints } from "@/lib/points";
@@ -51,8 +51,38 @@ export async function GET(request: Request) {
     .from(events)
     .where(and(...conditions));
 
+  let registeredEventIds = new Set<string>();
+  if (session && eventsList.length > 0) {
+    const [profile] = await db
+      .select({ id: studentProfiles.id })
+      .from(studentProfiles)
+      .where(eq(studentProfiles.userId, session.user.id));
+
+    if (profile) {
+      const regs = await db
+        .select({ eventId: eventRegistrations.eventId })
+        .from(eventRegistrations)
+        .where(
+          and(
+            inArray(
+              eventRegistrations.eventId,
+              eventsList.map((e) => e.id)
+            ),
+            eq(eventRegistrations.studentId, profile.id),
+            isNull(eventRegistrations.cancelledAt)
+          )
+        );
+      registeredEventIds = new Set(regs.map((r) => r.eventId));
+    }
+  }
+
+  const eventsWithRegistration = eventsList.map((e) => ({
+    ...e,
+    registered: registeredEventIds.has(e.id),
+  }));
+
   return NextResponse.json({
-    events: eventsList,
+    events: eventsWithRegistration,
     total: totalResult[0].count,
     page,
     limit,

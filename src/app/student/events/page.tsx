@@ -74,6 +74,7 @@ function StudentEventsContent() {
                     e.status === "cancelled" ||
                     e.status === "closed" ||
                     dateHasPassed,
+                  registered: Boolean(e.registered),
                 };
               }
             );
