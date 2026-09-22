@@ -315,11 +315,13 @@ export async function PUT(request: Request) {
       const newDept = body.department.trim();
       updateData.department = newDept;
 
-      if (profile) {
+      // Staff (Execom/Nodal) IEDC IDs are coded by role, not department (e.g.
+      // IEDC-2026-CTO-00001), so department edits must never trigger a re-issue.
+      if (profile && role === "student") {
         const oldCode = getDeptCode(profile.department || "");
         const newCode = getDeptCode(newDept);
 
-        if (oldCode !== newCode || !profile.iecdId?.includes(`-${newCode}-`)) {
+        if (oldCode !== newCode) {
           const yearParts = (profile.batch || "2027").split("-");
           const gradYear = parseInt(yearParts[1] || yearParts[0]) || 2027;
           const newIecdId = await generateIEDCId(newDept, gradYear);
