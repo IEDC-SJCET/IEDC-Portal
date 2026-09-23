@@ -1,10 +1,5 @@
 /**
  * Shared layout spec for the IEDC attendance roster ("Attendance Template - IEDC.docx").
- *
- * A landscape signing sheet: a centred "<Event> - ATTENDANCE (dd-mm-yyyy)" running
- * header, a six column table whose Signature column is left blank to be signed by
- * hand, and a right aligned "Page N" footer. The DOCX and PDF writers both build
- * from this module so the two downloads stay identical in layout.
  */
 
 import { isExecomPlaceholderProfile } from "@/lib/roles";
@@ -13,19 +8,14 @@ export interface AttendanceStudent {
   name: string;
   department: string;
   batch: string;
-  /** Portal role of the account behind the profile; faculty are left off the roster. */
   userRole?: string | null;
-  /**
-   * Class section ("A", "B", "C"). Sorted on but never printed — the template has no
-   * Signature-side column for it. Nothing records a section today, so this stays
-   * undefined and the sort falls straight through to the name.
-   */
   section?: string | null;
 }
 
 /** The slice of a registration record the roster actually prints. */
 export interface AttendanceRegistration {
   student: AttendanceStudent;
+  attended: boolean;
 }
 
 export interface AttendanceReportMeta {
@@ -33,7 +23,6 @@ export interface AttendanceReportMeta {
   startDatetime?: string | null;
 }
 
-/** One printed table row: the five filled columns, Signature stays empty. */
 export interface AttendanceRow {
   slNo: string;
   name: string;
@@ -42,6 +31,7 @@ export interface AttendanceRow {
   batch: string;
   /** Sort key only; `attendanceRowValues` does not print it. */
   section: string;
+  attended: boolean;
 }
 
 export type ColumnAlignment = "left" | "center" | "right";
@@ -55,18 +45,17 @@ export const ATTENDANCE_COLUMNS: ReadonlyArray<{
   width: number;
   align: ColumnAlignment;
 }> = [
-  { header: "Sl. No.", width: 1020, align: "right" },
-  { header: "Name", width: 3390, align: "left" },
-  { header: "Department", width: 1500, align: "left" },
-  { header: "Year", width: 1290, align: "left" },
-  { header: "Batch", width: 1500, align: "left" },
-  { header: "Signature", width: 3075, align: "left" },
-];
+    { header: "Sl. No.", width: 1020, align: "right" },
+    { header: "Name", width: 2523, align: "left" },
+    { header: "Department", width: 1200, align: "left" },
+    { header: "Year", width: 960, align: "left" },
+    { header: "Batch", width: 1117, align: "left" },
+    { header: "Attendance", width: 2206, align: "center" },
+  ];
 
-/** Page geometry from the template's sectPr, all in dxa. */
 export const PAGE = {
-  width: 15840,
-  height: 12240,
+  width: 11906,
+  height: 16838,
   margin: 1440,
   headerDistance: 720,
   footerDistance: 720,
@@ -220,6 +209,7 @@ export function buildAttendanceRows(
         year: deriveStudyYear(student?.batch || "", eventDate),
         batch: student?.batch || dash,
         section: student?.section?.trim() || "",
+        attended: !!registration.attended,
       };
     })
     .sort(compareRows)
@@ -228,8 +218,14 @@ export function buildAttendanceRows(
 }
 
 export function attendanceRowValues(row: AttendanceRow): string[] {
-  // Signature is deliberately blank — it is signed on the printed sheet.
-  return [row.slNo, row.name, row.department, row.year, row.batch, ""];
+  return [
+    row.slNo,
+    row.name,
+    row.department,
+    row.year,
+    row.batch,
+    row.attended ? "Present" : "Not Marked",
+  ];
 }
 
 export function buildAttendanceFileName(

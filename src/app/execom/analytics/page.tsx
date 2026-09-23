@@ -181,6 +181,7 @@ export default function ExecomAnalyticsPage() {
               batch: r.student?.batch || "",
               userRole: r.student?.userRole,
             },
+            attended: !!r.attended,
           }))
         )
       );
