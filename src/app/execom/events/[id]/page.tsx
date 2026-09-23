@@ -486,6 +486,7 @@ export default function ExecomEventDetailPage() {
 
           <EventRegistrationsTable
             canExport={canManage}
+            canEditAttendance={canManage}
             eventId={event.id}
             eventTitle={event.title}
             startDatetime={event.startDatetime}

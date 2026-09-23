@@ -48,6 +48,8 @@ export interface EventRegistrationsTableProps {
   initialRegistrations?: Registration[];
   /** Volunteers may read the roster but not export it. */
   canExport?: boolean;
+  /** Execom / Nodal Officer only: click a status to manually mark present or absent. */
+  canEditAttendance?: boolean;
 }
 
 export function EventRegistrationsTable({
@@ -56,6 +58,7 @@ export function EventRegistrationsTable({
   startDatetime,
   initialRegistrations,
   canExport = true,
+  canEditAttendance = false,
 }: EventRegistrationsTableProps) {
   const [registrations, setRegistrations] = useState<Registration[]>(
     initialRegistrations || []
@@ -67,6 +70,10 @@ export function EventRegistrationsTable({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "attended" | "registered">("all");
   const [searchQuery, setSearchQuery] = useState("");
+  // Row awaiting confirmation of a manual attendance change.
+  const [attendanceTarget, setAttendanceTarget] = useState<Registration | null>(null);
+  const [savingAttendance, setSavingAttendance] = useState(false);
+  const [attendanceError, setAttendanceError] = useState("");
 
   useEffect(() => {
     async function fetchRegistrations() {
@@ -101,8 +108,8 @@ export function EventRegistrationsTable({
       statusFilter === "all"
         ? true
         : statusFilter === "attended"
-        ? reg.attended
-        : !reg.attended;
+          ? reg.attended
+          : !reg.attended;
 
     const query = searchQuery.trim().toLowerCase();
     const matchesSearch =
@@ -140,8 +147,8 @@ export function EventRegistrationsTable({
         format === "pdf"
           ? await buildPdf()
           : await (
-              await import("@/lib/docx-export")
-            ).generateAttendanceDocx(reportMeta, exportList);
+            await import("@/lib/docx-export")
+          ).generateAttendanceDocx(reportMeta, exportList);
 
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -178,6 +185,46 @@ export function EventRegistrationsTable({
 
   // Clearing the URL closes the dialog; the effect above revokes it.
   const closePreview = () => setPreviewUrl(null);
+
+  const openAttendanceDialog = (reg: Registration) => {
+    setAttendanceError("");
+    setAttendanceTarget(reg);
+  };
+
+  const closeAttendanceDialog = () => {
+    if (savingAttendance) return;
+    setAttendanceTarget(null);
+  };
+
+  /** Flips the target row's attendance on the server, then mirrors it locally. */
+  const confirmAttendanceChange = async () => {
+    if (!attendanceTarget) return;
+    const studentId = attendanceTarget.student.id;
+    const present = !attendanceTarget.attended;
+    setSavingAttendance(true);
+    setAttendanceError("");
+    try {
+      const res = await fetch(`/api/events/${eventId}/attendance`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId, present }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAttendanceError(data.error || "Failed to update attendance. Please try again.");
+        return;
+      }
+      setRegistrations((prev) =>
+        prev.map((r) => (r.student.id === studentId ? { ...r, attended: present } : r))
+      );
+      setAttendanceTarget(null);
+    } catch (e) {
+      console.error("Manual attendance update failed:", e);
+      setAttendanceError("Failed to update attendance. Please try again.");
+    } finally {
+      setSavingAttendance(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -343,17 +390,30 @@ export function EventRegistrationsTable({
                   </td>
                   <td className="px-5 py-3.5">
                     <span
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${
-                        reg.role === "volunteer"
-                          ? "bg-purple-50 text-purple-700 border-purple-100"
-                          : "bg-blue-50 text-blue-700 border-blue-100"
-                      }`}
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${reg.role === "volunteer"
+                        ? "bg-purple-50 text-purple-700 border-purple-100"
+                        : "bg-blue-50 text-blue-700 border-blue-100"
+                        }`}
                     >
                       {reg.role || "participant"}
                     </span>
                   </td>
                   <td className="px-5 py-3.5">
-                    {reg.attended ? (
+                    {canEditAttendance ? (
+                      <button
+                        type="button"
+                        onClick={() => openAttendanceDialog(reg)}
+                        title={reg.attended ? "Click to mark absent" : "Click to mark present"}
+                        className={cn(
+                          "px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase inline-flex items-center gap-1 cursor-pointer transition-colors",
+                          reg.attended
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100"
+                            : "bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100"
+                        )}
+                      >
+                        {reg.attended ? "Present ✓" : "Not Marked"}
+                      </button>
+                    ) : reg.attended ? (
                       <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] font-bold uppercase inline-flex items-center gap-1">
                         Present ✓
                       </span>
@@ -370,6 +430,59 @@ export function EventRegistrationsTable({
         </div>
       )}
 
+      {/* Manual attendance override — Execom / Nodal Officer only. */}
+      {canEditAttendance && (
+        <Dialog
+          open={!!attendanceTarget}
+          onOpenChange={(open) => !open && closeAttendanceDialog()}
+        >
+          <DialogContent className="sm:max-w-md bg-white rounded-[32px] p-6 font-['Hanken_Grotesk'] text-[#1A0D0C]">
+            {attendanceTarget && (
+              <div className="flex flex-col gap-4">
+                <div className="pr-10">
+                  <DialogTitle className="text-lg font-bold text-[#1A0D0C]">
+                    {attendanceTarget.attended ? "Mark as absent?" : "Mark as present?"}
+                  </DialogTitle>
+                  <DialogDescription className="text-xs font-medium text-gray-500 mt-1">
+                    {attendanceTarget.student.name} ({attendanceTarget.student.iecdId})
+                    {attendanceTarget.attended
+                      ? " will be marked absent. Participation points for this event will be revoked."
+                      : " will be checked in manually and receive this event's points."}
+                  </DialogDescription>
+                </div>
+
+                {attendanceError && (
+                  <p className="text-xs font-medium text-red-600">{attendanceError}</p>
+                )}
+
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <Button
+                    onClick={closeAttendanceDialog}
+                    disabled={savingAttendance}
+                    className="h-9.5 px-4 rounded-full bg-white hover:bg-gray-50 border border-gray-200 text-[#1A0D0C] text-xs font-semibold cursor-pointer shadow-sm"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={confirmAttendanceChange}
+                    disabled={savingAttendance}
+                    className={cn(
+                      "h-9.5 px-4 rounded-full text-white text-xs font-semibold flex items-center gap-2 cursor-pointer shadow-sm",
+                      attendanceTarget.attended
+                        ? "bg-red-600 hover:bg-red-700"
+                        : "bg-emerald-600 hover:bg-emerald-700"
+                    )}
+                  >
+                    {savingAttendance && <Loader2 className="w-4 h-4 animate-spin" />}
+                    <span>{attendanceTarget.attended ? "Mark Absent" : "Mark Present"}</span>
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Report preview — the same PDF the download button produces. */}
       <Dialog open={!!previewUrl} onOpenChange={(open) => !open && closePreview()}>
         <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto bg-white rounded-[32px] p-6 font-['Hanken_Grotesk'] text-[#1A0D0C]">
@@ -384,8 +497,8 @@ export function EventRegistrationsTable({
                 {statusFilter === "attended"
                   ? " • attended only"
                   : statusFilter === "registered"
-                  ? " • not marked only"
-                  : ""}
+                    ? " • not marked only"
+                    : ""}
               </DialogDescription>
             </div>
 
