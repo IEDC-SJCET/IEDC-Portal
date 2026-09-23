@@ -78,8 +78,8 @@ export default function ExecomEventDetailPage() {
     setEditStartDatetime(formatForInput(event.startDatetime));
     setEditEndDatetime(formatForInput(event.endDatetime));
     setEditRegistrationLimit(event.registrationLimit || "");
-    setEditParticipationPoints(event.participationPoints || 10);
-    setEditVolunteerPoints(event.volunteerPoints || 20);
+    setEditParticipationPoints(event.participationPoints ?? 10);
+    setEditVolunteerPoints(event.volunteerPoints ?? 20);
     setEditPosterUrl(event.posterUrl || "");
     setEditRegistrationDeadline(event.registrationDeadline ? formatForInput(event.registrationDeadline) : "");
     setIsEditing(true);

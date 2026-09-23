@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { awardPoints } from "@/lib/points";
 import { isAdminRole } from "@/lib/roles";
 import { getEventAccess } from "@/lib/event-access";
+import { getCachedEvent, invalidateEventsCache } from "@/lib/events-cache";
 
 async function getSession() {
   return await auth.api.getSession({ headers: await headers() });
@@ -20,58 +21,16 @@ export async function GET(
   const resolvedParams = await Promise.resolve(params);
   const id = resolvedParams.id;
 
-  const [event] = await db.select().from(events).where(eq(events.id, id));
+  const [event, session] = await Promise.all([getCachedEvent(id), getSession()]);
 
   if (!event) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
-  const session = await getSession();
-
   if (event.status === "draft") {
     const access = await getEventAccess(session, id);
     if (!access.canView) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
-    }
-  }
-
-  const regCount = await db
-    .select({ count: count() })
-    .from(eventRegistrations)
-    .where(
-      and(
-        eq(eventRegistrations.eventId, id),
-        isNull(eventRegistrations.cancelledAt)
-      )
-    );
-
-  const attCount = await db
-    .select({ count: count() })
-    .from(eventAttendance)
-    .where(eq(eventAttendance.eventId, id));
-
-  let isRegistered = false;
-  let regRole: string | null = null;
-  if (session) {
-    const [profile] = await db
-      .select({ id: studentProfiles.id })
-      .from(studentProfiles)
-      .where(eq(studentProfiles.userId, session.user.id));
-    if (profile) {
-      const [existing] = await db
-        .select({ role: eventRegistrations.role })
-        .from(eventRegistrations)
-        .where(
-          and(
-            eq(eventRegistrations.eventId, id),
-            eq(eventRegistrations.studentId, profile.id),
-            isNull(eventRegistrations.cancelledAt)
-          )
-        );
-      if (existing) {
-        isRegistered = true;
-        regRole = existing.role;
-      }
     }
   }
 
@@ -81,19 +40,48 @@ export async function GET(
     : null;
   const canSeeVolunteers = isAdminRole(sessionRole);
 
-  const volunteers = !canSeeVolunteers ? [] : await db
-    .select({ email: users.email })
-    .from(eventRegistrations)
-    .innerJoin(studentProfiles, eq(eventRegistrations.studentId, studentProfiles.id))
-    .innerJoin(users, eq(studentProfiles.userId, users.id))
-    .where(
-      and(
-        eq(eventRegistrations.eventId, id),
-        eq(eventRegistrations.role, "volunteer"),
-        isNull(eventRegistrations.cancelledAt)
-      )
-    );
+  // Independent lookups, run concurrently to save round trips.
+  const [regCount, attCount, [existing], volunteers] = await Promise.all([
+    db
+      .select({ count: count() })
+      .from(eventRegistrations)
+      .where(
+        and(
+          eq(eventRegistrations.eventId, id),
+          isNull(eventRegistrations.cancelledAt)
+        )
+      ),
+    db
+      .select({ count: count() })
+      .from(eventAttendance)
+      .where(eq(eventAttendance.eventId, id)),
+    !session ? [] : db
+      .select({ role: eventRegistrations.role })
+      .from(eventRegistrations)
+      .innerJoin(studentProfiles, eq(eventRegistrations.studentId, studentProfiles.id))
+      .where(
+        and(
+          eq(eventRegistrations.eventId, id),
+          eq(studentProfiles.userId, session.user.id),
+          isNull(eventRegistrations.cancelledAt)
+        )
+      ),
+    !canSeeVolunteers ? [] : db
+      .select({ email: users.email })
+      .from(eventRegistrations)
+      .innerJoin(studentProfiles, eq(eventRegistrations.studentId, studentProfiles.id))
+      .innerJoin(users, eq(studentProfiles.userId, users.id))
+      .where(
+        and(
+          eq(eventRegistrations.eventId, id),
+          eq(eventRegistrations.role, "volunteer"),
+          isNull(eventRegistrations.cancelledAt)
+        )
+      ),
+  ]);
 
+  const isRegistered = !!existing;
+  const regRole: string | null = existing?.role ?? null;
   const volunteerEmails = volunteers.map((v) => v.email);
 
   return NextResponse.json({
@@ -158,6 +146,8 @@ export async function PUT(
   if (!updated) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
+
+  invalidateEventsCache();
 
   // Sync volunteer registrations and award points if volunteerEmails is provided
   if (volunteerEmails !== undefined && volunteerEmails !== null) {
@@ -238,7 +228,7 @@ export async function PUT(
           activityType: "event_volunteer",
           referenceId: id,
           referenceType: "event",
-          customPoints: updated.volunteerPoints || 20,
+          customPoints: updated.volunteerPoints ?? 20,
           note: `Volunteered for event: ${updated.title}`,
           awardedBy: session.user.id,
         });

@@ -693,7 +693,7 @@ export default function FacultyReportsPage() {
                               })}
                             </span>
                             {ev.venue && <span>• 📍 {ev.venue}</span>}
-                            <span>• ⭐ {ev.participationPoints || 10} Pts</span>
+                            <span>• ⭐ {ev.participationPoints ?? 10} Pts</span>
                           </div>
                         </div>
 

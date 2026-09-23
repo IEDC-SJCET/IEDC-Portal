@@ -132,8 +132,8 @@ export function CreateEventModal({
           form.registrationLimit && !isNaN(parseInt(form.registrationLimit))
             ? parseInt(form.registrationLimit)
             : undefined,
-        participationPoints: parseInt(form.participationPoints) || 10,
-        volunteerPoints: parseInt(form.volunteerPoints) || 20,
+        participationPoints: Number.isNaN(parseInt(form.participationPoints)) ? 10 : parseInt(form.participationPoints),
+        volunteerPoints: Number.isNaN(parseInt(form.volunteerPoints)) ? 20 : parseInt(form.volunteerPoints),
       };
 
       const res = await fetch("/api/events", {

@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { studentProfiles, pointsLog, users } from "@/db/schema";
 import { desc, eq, gte, and, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import { parsePagination } from "@/lib/request";
 import {
   getRedis,
@@ -96,6 +97,23 @@ async function fetchFromDb(
   }));
 }
 
+/**
+ * Postgres fallback cached in the Next.js Data Cache with the same TTLs as Redis,
+ * so a missing or cold Redis doesn't send every viewer to the database. The
+ * leaderboard is public and identical for everyone. `periodKey` is only part of
+ * the cache key, so weekly/monthly boards roll over at the period boundary.
+ */
+const cachedFetchFromDb = Object.fromEntries(
+  (Object.keys(LEADERBOARD_TTL) as LeaderboardScope[]).map((scope) => [
+    scope,
+    unstable_cache(
+      (_periodKey: string, limit: number, offset: number) => fetchFromDb(scope, limit, offset),
+      ["leaderboard", scope],
+      { tags: ["leaderboard"], revalidate: LEADERBOARD_TTL[scope] }
+    ),
+  ])
+) as Record<LeaderboardScope, (periodKey: string, limit: number, offset: number) => Promise<LeaderboardEntry[]>>;
+
 /** Try to read a page from Redis sorted set. Returns null on miss. */
 async function fetchFromRedis(
   scope: LeaderboardScope,
@@ -174,7 +192,7 @@ export async function GET(request: Request) {
   if (!cached) {
     // 2. Miss — populate Redis and read from Postgres
     populateRedis(scope).catch(console.error); // async, fire-and-forget
-    cached = await fetchFromDb(scope, limit, offset);
+    cached = await cachedFetchFromDb[scope](leaderboardKey(scope), limit, offset);
   }
 
   return NextResponse.json({
