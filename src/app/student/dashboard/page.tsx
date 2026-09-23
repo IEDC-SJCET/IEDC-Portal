@@ -64,25 +64,23 @@ export default function StudentDashboard() {
             setCertificatesCount(profileData.certificatesCount);
           }
 
-          let reposCount = profileData.projectsCount || 0;
+          setGithubReposCount(profileData.projectsCount || 0);
           if (profileData.githubUrl) {
             const match = profileData.githubUrl.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/([^/?#]+)/i);
             const username = match ? match[1] : (!profileData.githubUrl.includes("/") ? profileData.githubUrl.trim() : null);
             if (username) {
-              try {
-                const ghRes = await fetch(`https://api.github.com/users/${username}`);
-                if (ghRes.ok) {
-                  const ghData = await ghRes.json();
-                  if (typeof ghData.public_repos === "number") {
-                    reposCount = ghData.public_repos;
+              fetch(`https://api.github.com/users/${username}`)
+                .then((ghRes) => (ghRes.ok ? ghRes.json() : null))
+                .then((ghData) => {
+                  if (typeof ghData?.public_repos === "number") {
+                    setGithubReposCount(ghData.public_repos);
                   }
-                }
-              } catch (e) {
-                console.error("Failed to fetch GitHub repos count:", e);
-              }
+                })
+                .catch((e) => {
+                  console.error("Failed to fetch GitHub repos count:", e);
+                });
             }
           }
-          setGithubReposCount(reposCount);
         }
 
         if (eventsRes.ok) {

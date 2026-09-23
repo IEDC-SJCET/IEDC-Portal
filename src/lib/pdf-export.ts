@@ -130,8 +130,8 @@ function drawCellText(
 }
 
 /**
- * Renders the attendance roster in the IEDC template layout: landscape sheet,
- * running event header, six column signing table, "Page N" footer. Mirrors
+ * Renders the attendance roster in the IEDC template layout: A4 portrait sheet,
+ * running event header, six column roster table, "Page N" footer. Mirrors
  * `generateAttendanceDocx` so both downloads print identically.
  */
 export async function generateAttendancePdf(

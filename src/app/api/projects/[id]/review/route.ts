@@ -7,6 +7,7 @@ import { reviewProjectSchema } from "@/lib/validators";
 import { awardPoints } from "@/lib/points";
 import { NextResponse } from "next/server";
 import { isAdminRole } from "@/lib/roles";
+import { invalidateProjectsCache } from "@/lib/projects-cache";
 
 export async function PATCH(
   request: Request,
@@ -52,6 +53,8 @@ export async function PATCH(
     })
     .where(eq(projects.id, id))
     .returning();
+
+  invalidateProjectsCache();
 
   // Award points if approved — only once per project (idempotent)
   if (parsed.data.status === "approved" && project.submittedBy) {

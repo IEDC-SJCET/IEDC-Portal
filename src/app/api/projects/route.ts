@@ -7,6 +7,7 @@ import { createProjectSchema } from "@/lib/validators";
 import { NextResponse } from "next/server";
 import { isAdminRole } from "@/lib/roles";
 import { parsePagination } from "@/lib/request";
+import { getCachedApprovedProjects, invalidateProjectsCache, listProjects } from "@/lib/projects-cache";
 
 async function getSession() {
   return await auth.api.getSession({ headers: await headers() });
@@ -56,52 +57,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ projects: projectsList, page, limit });
   }
 
-  const status = isStaff ? requestedStatus : "approved";
-
-  const whereConditions = [
-    or(eq(projects.isDeleted, false), isNull(projects.isDeleted)),
-  ];
-
-  if (status !== "all") {
-    whereConditions.push(
-      eq(
-        projects.status,
-        status as "pending" | "approved" | "rejected" | "changes_requested"
-      )
-    );
-  }
-
-  const projectsList = await db
-    .select({
-      id: projects.id,
-      title: projects.title,
-      description: projects.description,
-      githubUrl: projects.githubUrl,
-      demoUrl: projects.demoUrl,
-      tags: projects.tags,
-      lookingForContributors: projects.lookingForContributors,
-      contributorRoles: projects.contributorRoles,
-      contributorDescription: projects.contributorDescription,
-      status: projects.status,
-      reviewComment: projects.reviewComment,
-      submittedAt: projects.submittedAt,
-      submittedBy: projects.submittedBy,
-      studentName: studentProfiles.name,
-      department: studentProfiles.department,
-      ...(isStaff
-        ? {
-          admissionNumber: studentProfiles.admissionNumber,
-          iecdId: studentProfiles.iecdId,
-          batch: studentProfiles.batch,
-        }
-        : {}),
-    })
-    .from(projects)
-    .leftJoin(studentProfiles, eq(projects.submittedBy, studentProfiles.id))
-    .where(and(...whereConditions))
-    .orderBy(desc(projects.submittedAt))
-    .limit(limit)
-    .offset(page * limit);
+  const projectsList = isStaff
+    ? await listProjects(requestedStatus, true, page, limit)
+    : await getCachedApprovedProjects(page, limit);
 
   return NextResponse.json({ projects: projectsList, page, limit });
 }
@@ -145,6 +103,8 @@ export async function POST(request: Request) {
       submittedBy: profile.id,
     })
     .returning();
+
+  invalidateProjectsCache();
 
   // Add submitter as team member
   await db.insert(projectTeamMembers).values({

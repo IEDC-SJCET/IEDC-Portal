@@ -1,6 +1,8 @@
 import { db } from "@/db";
 import { certIdCounter } from "@/db/schema";
 import { sql } from "drizzle-orm";
+import fs from "node:fs";
+import path from "node:path";
 import {
   PDFDocument,
   StandardFonts,
@@ -342,11 +344,25 @@ function pct(value: number | null | undefined, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
+let cachedLogoBytes: Uint8Array | null | undefined;
+
+function loadLogoBytes(): Uint8Array | null {
+  if (cachedLogoBytes !== undefined) return cachedLogoBytes;
+  try {
+    cachedLogoBytes = new Uint8Array(
+      fs.readFileSync(path.join(process.cwd(), "public", "icon.png"))
+    );
+  } catch {
+    cachedLogoBytes = null;
+  }
+  return cachedLogoBytes;
+}
+
 async function renderDefaultCertificate(
   input: CertificateRenderInput
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
-  // A4 landscape.
+
   const PAGE_W = 842;
   const PAGE_H = 595;
   const page = pdfDoc.addPage([PAGE_W, PAGE_H]);
@@ -401,32 +417,18 @@ async function renderDefaultCertificate(
 
   let y = PAGE_H - 92;
 
-  drawCentered(page, ORGANISATION.short, {
-    centerX,
-    y,
-    size: 13,
-    font: sansBold,
-    color: crimson,
-  });
-  y -= 20;
-
-  drawCentered(page, ORGANISATION.cell, {
-    centerX,
-    y,
-    size: 10.5,
-    font: sans,
-    color: muted,
-  });
-  y -= 15;
-
-  drawCentered(page, ORGANISATION.institute, {
-    centerX,
-    y,
-    size: 10.5,
-    font: sans,
-    color: muted,
-  });
-  y -= 62;
+  const logoBytes = loadLogoBytes();
+  if (logoBytes) {
+    const logo = await pdfDoc.embedPng(logoBytes);
+    const logoSize = 46;
+    page.drawImage(logo, {
+      x: centerX - logoSize / 2,
+      y: y - logoSize + 30,
+      width: logoSize,
+      height: logoSize,
+    });
+  }
+  y -= 97;
 
   const heading = input.template.heading || CERTIFICATE_DEFAULTS.heading;
   const headingSize = fitFontSize(

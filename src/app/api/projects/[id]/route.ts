@@ -5,6 +5,7 @@ import { projects, studentProfiles } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { updateProjectSchema } from "@/lib/validators";
 import { NextResponse } from "next/server";
+import { invalidateProjectsCache } from "@/lib/projects-cache";
 
 export async function PATCH(
   request: Request,
@@ -60,6 +61,8 @@ export async function PATCH(
     })
     .where(eq(projects.id, id))
     .returning();
+
+  invalidateProjectsCache();
 
   return NextResponse.json(updated);
 }

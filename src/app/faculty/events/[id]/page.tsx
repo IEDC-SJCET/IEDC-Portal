@@ -200,9 +200,9 @@ export default function FacultyEventDetailPage() {
         <div className="flex flex-wrap gap-3 pt-2 font-['Hanken_Grotesk']">
           <div className="flex items-center gap-2 bg-emerald-50 text-emerald-800 px-4 py-2 rounded-2xl text-xs font-bold border border-emerald-200/70">
             <Award className="w-4 h-4 text-emerald-600" />
-            <span>+{event.participationPoints || 10} Pts (Participant)</span>
+            <span>+{event.participationPoints ?? 10} Pts (Participant)</span>
           </div>
-          {event.volunteerPoints && (
+          {event.volunteerPoints != null && (
             <div className="flex items-center gap-2 bg-blue-50 text-blue-800 px-4 py-2 rounded-2xl text-xs font-bold border border-blue-200/70">
               <Sparkles className="w-4 h-4 text-blue-600" />
               <span>+{event.volunteerPoints} Pts (Volunteer)</span>

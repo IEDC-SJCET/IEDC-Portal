@@ -48,8 +48,8 @@ const alignmentFor = (align: ColumnAlignment) =>
   align === "center"
     ? AlignmentType.CENTER
     : align === "right"
-    ? AlignmentType.RIGHT
-    : AlignmentType.LEFT;
+      ? AlignmentType.RIGHT
+      : AlignmentType.LEFT;
 
 /** Every cell in the template carries the same hairline box. */
 const cellBorders = {
@@ -79,10 +79,6 @@ function buildCell(text: string, width: number, align: ColumnAlignment, bold: bo
   });
 }
 
-/**
- * Renders the attendance roster in the IEDC template layout: landscape sheet,
- * running event header, six column signing table, "Page N" footer.
- */
 export async function generateAttendanceDocx(
   meta: AttendanceReportMeta,
   registrations: AttendanceRegistration[]
@@ -94,30 +90,30 @@ export async function generateAttendanceDocx(
   const toPx = (points: number) => Math.round((points * 96) / 72);
   const watermarkRun = watermark
     ? new ImageRun({
-        type: "png",
-        data: watermark,
-        transformation: {
-          width: toPx(WATERMARK.width),
-          height: toPx(WATERMARK.height),
+      type: "png",
+      data: watermark,
+      transformation: {
+        width: toPx(WATERMARK.width),
+        height: toPx(WATERMARK.height),
+      },
+      floating: {
+        horizontalPosition: {
+          relative: HorizontalPositionRelativeFrom.MARGIN,
+          align: HorizontalPositionAlign.CENTER,
         },
-        floating: {
-          horizontalPosition: {
-            relative: HorizontalPositionRelativeFrom.MARGIN,
-            align: HorizontalPositionAlign.CENTER,
-          },
-          verticalPosition: {
-            relative: VerticalPositionRelativeFrom.MARGIN,
-            align: VerticalPositionAlign.CENTER,
-          },
-          behindDocument: true,
-          allowOverlap: true,
+        verticalPosition: {
+          relative: VerticalPositionRelativeFrom.MARGIN,
+          align: VerticalPositionAlign.CENTER,
         },
-        altText: {
-          name: "Watermark",
-          description: "SJCET Boot Camp",
-          title: "SJCET Boot Camp",
-        },
-      })
+        behindDocument: true,
+        allowOverlap: true,
+      },
+      altText: {
+        name: "Watermark",
+        description: "SJCET Boot Camp",
+        title: "SJCET Boot Camp",
+      },
+    })
     : null;
 
   const headerRow = new TableRow({
@@ -156,11 +152,9 @@ export async function generateAttendanceDocx(
         properties: {
           page: {
             size: {
-              // docx takes portrait dimensions and swaps them for a landscape section,
-              // so hand it the printed sheet the other way round.
-              width: PAGE.height,
-              height: PAGE.width,
-              orientation: PageOrientation.LANDSCAPE,
+              width: PAGE.width,
+              height: PAGE.height,
+              orientation: PageOrientation.PORTRAIT,
             },
             margin: {
               top: PAGE.margin,
