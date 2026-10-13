@@ -173,7 +173,7 @@ export async function POST(
 
     // Award volunteer points once per student per event.
     const [alreadyAwarded] = await db
-      .select({ id: pointsLog.id })
+      .select({ id: pointsLog.id, points: pointsLog.points })
       .from(pointsLog)
       .where(
         and(
@@ -183,13 +183,17 @@ export async function POST(
         )
       );
 
-    if (!alreadyAwarded) {
+    if (!alreadyAwarded || alreadyAwarded.points <= 0) {
+      if (alreadyAwarded && alreadyAwarded.points <= 0) {
+        await db.delete(pointsLog).where(eq(pointsLog.id, alreadyAwarded.id));
+      }
+      const volPoints = event.volunteerPoints && event.volunteerPoints > 0 ? event.volunteerPoints : 20;
       await awardPoints({
         studentId: target.studentId,
         activityType: "event_volunteer",
         referenceId: eventId,
         referenceType: "event",
-        customPoints: event.volunteerPoints ?? 20,
+        customPoints: volPoints,
         note: `Volunteered for event: ${event.title}`,
         awardedBy: session.user.id,
       });

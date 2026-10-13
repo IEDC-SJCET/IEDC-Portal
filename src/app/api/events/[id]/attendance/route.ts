@@ -105,23 +105,28 @@ export async function PATCH(
         // Same points rule as the QR scan: award once per activity per event.
         const activityType =
           registration.role === "volunteer" ? "event_volunteer" : "event_participation";
+        const eventVolunteerPoints = event.volunteerPoints && event.volunteerPoints > 0 ? event.volunteerPoints : null;
+        const eventParticipationPoints = event.participationPoints && event.participationPoints > 0 ? event.participationPoints : 10;
+
         const customPoints =
           activityType === "event_volunteer"
-            ? (event.volunteerPoints ?? 20)
-            : (event.participationPoints ?? 10);
+            ? (eventVolunteerPoints ?? eventParticipationPoints)
+            : eventParticipationPoints;
 
         const [alreadyAwarded] = await db
-          .select({ id: pointsLog.id })
+          .select({ id: pointsLog.id, points: pointsLog.points })
           .from(pointsLog)
           .where(
             and(
               eq(pointsLog.studentId, studentId),
-              eq(pointsLog.activityType, activityType),
               eq(pointsLog.referenceId, eventId)
             )
           );
 
-        if (!alreadyAwarded) {
+        if (!alreadyAwarded || alreadyAwarded.points <= 0) {
+          if (alreadyAwarded && alreadyAwarded.points <= 0) {
+            await db.delete(pointsLog).where(eq(pointsLog.id, alreadyAwarded.id));
+          }
           await awardPoints({
             studentId,
             activityType,

@@ -51,7 +51,7 @@ export async function awardPoints(params: {
 
   // Get configured points for this activity type
   let points = customPoints;
-  if (points === undefined || points === null) {
+  if (points === undefined || points === null || points <= 0) {
     const rules = await db
       .select()
       .from(pointRules)

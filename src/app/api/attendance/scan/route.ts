@@ -170,25 +170,29 @@ export async function POST(request: Request) {
       ? "event_volunteer"
       : "event_participation";
 
+  const eventVolunteerPoints = event.volunteerPoints && event.volunteerPoints > 0 ? event.volunteerPoints : null;
+  const eventParticipationPoints = event.participationPoints && event.participationPoints > 0 ? event.participationPoints : 10;
+
   const customPoints =
     activityType === "event_volunteer"
-      ? (event.volunteerPoints ?? 20)
-      : (event.participationPoints ?? 10);
+      ? (eventVolunteerPoints ?? eventParticipationPoints)
+      : eventParticipationPoints;
 
-  // Volunteers are already awarded when they are assigned to the event, so only
-  // award if this student has no points logged for this activity on this event.
+  // Ensure this student has positive points awarded for attending this event.
   const [alreadyAwarded] = await db
-    .select({ id: pointsLog.id })
+    .select({ id: pointsLog.id, points: pointsLog.points })
     .from(pointsLog)
     .where(
       and(
         eq(pointsLog.studentId, student.id),
-        eq(pointsLog.activityType, activityType),
         eq(pointsLog.referenceId, eventId)
       )
     );
 
-  if (!alreadyAwarded) {
+  if (!alreadyAwarded || alreadyAwarded.points <= 0) {
+    if (alreadyAwarded && alreadyAwarded.points <= 0) {
+      await db.delete(pointsLog).where(eq(pointsLog.id, alreadyAwarded.id));
+    }
     await awardPoints({
       studentId: student.id,
       activityType,
