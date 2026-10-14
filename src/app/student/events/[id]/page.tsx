@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { EventDetail } from "./types";
@@ -11,10 +12,12 @@ import { EventRegistrationsTable } from "@/components/events/event-registrations
 import { EventAnalytics } from "@/components/events/event-analytics";
 import { useSession } from "@/lib/auth-client";
 import { buildLoginUrl } from "@/lib/redirect";
+import { studentQueryKeys } from "@/lib/student-queries";
 
 export default function EventDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: session, isPending: sessionPending } = useSession();
   const isGuest = !sessionPending && !session;
   const [event, setEvent] = useState<EventDetail | null>(null);
@@ -74,6 +77,7 @@ export default function EventDetailPage() {
         setRegistered(true);
         setRegisteredRole("participant");
         setMessage("Successfully registered!");
+        queryClient.invalidateQueries({ queryKey: studentQueryKeys.events });
       } else {
         setMessage(data.error || "Registration failed");
       }
@@ -98,6 +102,7 @@ export default function EventDetailPage() {
         setRegistered(false);
         setRegisteredRole(null);
         setMessage("Registration cancelled successfully.");
+        queryClient.invalidateQueries({ queryKey: studentQueryKeys.events });
       } else {
         setMessage(data.error || "Failed to cancel registration");
       }

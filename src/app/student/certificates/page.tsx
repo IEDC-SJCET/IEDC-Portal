@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
   Award,
@@ -16,6 +17,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fetchJson, studentQueryKeys } from "@/lib/student-queries";
 import {
   Dialog,
   DialogContent,
@@ -45,28 +47,18 @@ const FILTER_ITEMS = [
 ];
 
 export default function CertificatesPage() {
-  const [certificates, setCertificates] = useState<CertificateItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: certificates = [], isPending: loading } = useQuery({
+    queryKey: studentQueryKeys.certificates,
+    queryFn: async () => {
+      const data = await fetchJson<{ certificates?: CertificateItem[] }>(
+        "/api/student/certificates"
+      );
+      return data.certificates || [];
+    },
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [selectedCert, setSelectedCert] = useState<CertificateItem | null>(null);
-
-  useEffect(() => {
-    async function fetchCertificates() {
-      try {
-        const res = await fetch("/api/student/certificates");
-        if (res.ok) {
-          const data = await res.json();
-          setCertificates(data.certificates || []);
-        }
-      } catch (err) {
-        console.error("Failed to fetch student certificates:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchCertificates();
-  }, []);
 
   const filteredCertificates = certificates.filter((cert) => {
     const title = (cert.eventTitle || "Event Certificate").toLowerCase();

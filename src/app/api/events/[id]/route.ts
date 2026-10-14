@@ -212,7 +212,7 @@ export async function PUT(
 
       // Check points log to avoid awarding points multiple times
       const [existingPointsLog] = await db
-        .select()
+        .select({ id: pointsLog.id, points: pointsLog.points })
         .from(pointsLog)
         .where(
           and(
@@ -222,13 +222,17 @@ export async function PUT(
           )
         );
 
-      if (!existingPointsLog) {
+      if (!existingPointsLog || existingPointsLog.points <= 0) {
+        if (existingPointsLog && existingPointsLog.points <= 0) {
+          await db.delete(pointsLog).where(eq(pointsLog.id, existingPointsLog.id));
+        }
+        const volPoints = updated.volunteerPoints && updated.volunteerPoints > 0 ? updated.volunteerPoints : 20;
         await awardPoints({
           studentId,
           activityType: "event_volunteer",
           referenceId: id,
           referenceType: "event",
-          customPoints: updated.volunteerPoints ?? 20,
+          customPoints: volPoints,
           note: `Volunteered for event: ${updated.title}`,
           awardedBy: session.user.id,
         });

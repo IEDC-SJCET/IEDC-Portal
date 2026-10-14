@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useSession } from "@/lib/auth-client";
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { IdCard, ProfileData } from "@/components/profile/_components/id-card";
+import {
+  STUDENT_STALE_TIMES,
+  fetchJson,
+  studentQueryKeys,
+} from "@/lib/student-queries";
 
 interface StudentProfile {
   name?: string;
@@ -34,85 +39,67 @@ interface EventItem {
   posterUrl?: string | null;
 }
 
+const DASHBOARD_EVENTS_URL = "/api/events?upcoming=true&limit=30";
+
+async function fetchUpcomingEvents(): Promise<EventItem[]> {
+  const eventsData = await fetchJson<{ events?: Record<string, unknown>[] }>(
+    DASHBOARD_EVENTS_URL
+  );
+  const now = new Date();
+  return (eventsData.events || []).filter((e: Record<string, unknown>) => {
+    if (e.status === "completed" || e.status === "cancelled") return false;
+    const dateStr = (e.endDatetime as string) || (e.startDatetime as string);
+    if (dateStr) {
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime()) && d < now) return false;
+    }
+    return true;
+  }) as unknown as EventItem[];
+}
+
+// Unlike getGithubUsername in utils, this also accepts a bare username.
+function parseGithubUsername(githubUrl?: string): string | null {
+  if (!githubUrl) return null;
+  const match = githubUrl.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/([^/?#]+)/i);
+  return match ? match[1] : (!githubUrl.includes("/") ? githubUrl.trim() : null);
+}
+
 export default function StudentDashboard() {
   const { data: session } = useSession();
-  const [profile, setProfile] = useState<StudentProfile | null>(null);
-  const [events, setEvents] = useState<EventItem[]>([]);
-  const [qrUrl, setQrUrl] = useState<string | null>(null);
-  const [certificatesCount, setCertificatesCount] = useState<number>(0);
-  const [eventsParticipatedCount, setEventsParticipatedCount] = useState<number>(0);
-  const [githubReposCount, setGithubReposCount] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
+  const profileQuery = useQuery({
+    queryKey: studentQueryKeys.profile,
+    queryFn: () => fetchJson<StudentProfile>("/api/student/profile"),
+  });
+  const eventsQuery = useQuery({
+    queryKey: studentQueryKeys.eventList(DASHBOARD_EVENTS_URL),
+    queryFn: fetchUpcomingEvents,
+    staleTime: STUDENT_STALE_TIMES.events,
+  });
+  const profile = profileQuery.data ?? null;
+  const events = eventsQuery.data ?? [];
+  const loading = profileQuery.isPending || eventsQuery.isPending;
 
-  useEffect(() => {
-    async function fetchDashboardData() {
-      try {
-        const [profileRes, eventsRes, qrRes] = await Promise.all([
-          fetch("/api/student/profile"),
-          fetch("/api/events?upcoming=true&limit=30"),
-          fetch("/api/student/qr"),
-        ]);
+  const githubUsername = parseGithubUsername(profile?.githubUrl);
+  const { data: githubPublicRepos } = useQuery({
+    queryKey: studentQueryKeys.githubRepos(githubUsername ?? ""),
+    queryFn: async () => {
+      const ghData = await fetchJson<{ public_repos?: unknown }>(
+        `https://api.github.com/users/${githubUsername}`
+      );
+      return typeof ghData.public_repos === "number" ? ghData.public_repos : null;
+    },
+    enabled: !!githubUsername,
+    staleTime: STUDENT_STALE_TIMES.githubRepos,
+    retry: false,
+  });
 
-        if (profileRes.ok) {
-          const profileData: StudentProfile = await profileRes.json();
-          setProfile(profileData);
-
-          if (typeof profileData.eventsParticipatedCount === "number") {
-            setEventsParticipatedCount(profileData.eventsParticipatedCount);
-          }
-          if (typeof profileData.certificatesCount === "number") {
-            setCertificatesCount(profileData.certificatesCount);
-          }
-
-          setGithubReposCount(profileData.projectsCount || 0);
-          if (profileData.githubUrl) {
-            const match = profileData.githubUrl.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/([^/?#]+)/i);
-            const username = match ? match[1] : (!profileData.githubUrl.includes("/") ? profileData.githubUrl.trim() : null);
-            if (username) {
-              fetch(`https://api.github.com/users/${username}`)
-                .then((ghRes) => (ghRes.ok ? ghRes.json() : null))
-                .then((ghData) => {
-                  if (typeof ghData?.public_repos === "number") {
-                    setGithubReposCount(ghData.public_repos);
-                  }
-                })
-                .catch((e) => {
-                  console.error("Failed to fetch GitHub repos count:", e);
-                });
-            }
-          }
-        }
-
-        if (eventsRes.ok) {
-          const eventsData = await eventsRes.json();
-          const now = new Date();
-          const upcomingEvents = (eventsData.events || []).filter((e: Record<string, unknown>) => {
-            if (e.status === "completed" || e.status === "cancelled") return false;
-            const dateStr = (e.endDatetime as string) || (e.startDatetime as string);
-            if (dateStr) {
-              const d = new Date(dateStr);
-              if (!isNaN(d.getTime()) && d < now) return false;
-            }
-            return true;
-          });
-          setEvents(upcomingEvents);
-        }
-
-        if (qrRes.ok) {
-          const qrData = await qrRes.json();
-          if (qrData.qrDataUrl) {
-            setQrUrl(qrData.qrDataUrl);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load dashboard profile/events:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchDashboardData();
-  }, []);
+  const certificatesCount =
+    typeof profile?.certificatesCount === "number" ? profile.certificatesCount : 0;
+  const eventsParticipatedCount =
+    typeof profile?.eventsParticipatedCount === "number"
+      ? profile.eventsParticipatedCount
+      : 0;
+  const githubReposCount = githubPublicRepos ?? profile?.projectsCount ?? 0;
 
   const studentName = profile?.name || session?.user?.name || "Student";
   const iecdId = profile?.iecdId || profile?.admissionNumber || "IEDC SJCET";

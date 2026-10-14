@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useContext, useEffect, useState, useRef } from "react";
+import { QueryClientContext } from "@tanstack/react-query";
 import { useSession, signOut } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { studentQueryKeys } from "@/lib/student-queries";
 import { Loader2, QrCode, LogOut, Share2, ArrowLeft, Check } from "lucide-react";
 import { toPng } from "html-to-image";
 import { IdCard, ProfileData, formatDesignation } from "./_components/id-card";
@@ -12,6 +14,8 @@ import { ProfileDownloadCard } from "./_components/profile-download-card";
 export default function ProfilePage() {
   const { data: session } = useSession();
   const router = useRouter();
+  // Optional: only the student layout provides a QueryClient.
+  const queryClient = useContext(QueryClientContext);
   const downloadCardRef = useRef<HTMLDivElement>(null);
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -44,6 +48,7 @@ export default function ProfilePage() {
       await signOut({
         fetchOptions: {
           onSuccess: () => {
+            queryClient?.clear();
             router.push("/auth/login");
             router.refresh();
           },
@@ -82,6 +87,7 @@ export default function ProfilePage() {
         setProfile(await res.json());
         setEditing(false);
         setEditData({});
+        queryClient?.invalidateQueries({ queryKey: studentQueryKeys.profile });
       }
     } catch (error) {
       console.error("Save error:", error);

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Trophy,
   Star,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { LinkedinIcon, GithubIcon } from "@/components/ui/icons";
 import { cn, getGithubUsername } from "@/lib/utils";
+import { fetchJson, studentQueryKeys } from "@/lib/student-queries";
 import {
   Dialog,
   DialogContent,
@@ -71,10 +73,26 @@ function SkeletonRow() {
 
 export default function LeaderboardPage() {
   const [scope, setScope] = useState<Scope>("overall");
-  const [champions, setChampions] = useState<LeaderboardUser[]>([]);
-  const [me, setMe] = useState<MeProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isScopeLoading, setIsScopeLoading] = useState(false);
+  const leaderboardQuery = useQuery({
+    queryKey: studentQueryKeys.leaderboard(scope),
+    queryFn: async () => {
+      const data = await fetchJson<{
+        leaderboard?: { iecdId: string; name: string; points: number; rank: number }[];
+      }>(`/api/leaderboard?scope=${scope}&limit=50`);
+      return mapEntries(data.leaderboard ?? []);
+    },
+  });
+  const meQuery = useQuery({
+    queryKey: studentQueryKeys.profile,
+    queryFn: () => fetchJson<MeProfile>("/api/student/profile"),
+  });
+  const champions = leaderboardQuery.data ?? [];
+  const me = meQuery.data ?? null;
+  // Full-page skeleton only for the initial (overall) load; switching to a
+  // scope that isn't cached yet shows the list skeleton instead.
+  const isLoading =
+    meQuery.isPending || (scope === "overall" && leaderboardQuery.isPending);
+  const isScopeLoading = leaderboardQuery.isPending;
   const [findMeActive, setFindMeActive] = useState(false);
 
   // Profile modal states
@@ -84,55 +102,12 @@ export default function LeaderboardPage() {
 
   const myRowRef = useRef<HTMLDivElement>(null);
 
-  // ── Initial load ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [leaderboardRes, profileRes] = await Promise.all([
-          fetch("/api/leaderboard?scope=overall&limit=50"),
-          fetch("/api/student/profile"),
-        ]);
-
-        if (leaderboardRes.ok) {
-          const lData = await leaderboardRes.json();
-          setChampions(mapEntries(lData.leaderboard ?? []));
-        }
-
-        if (profileRes.ok) {
-          const pData = await profileRes.json();
-          setMe(pData);
-        }
-      } catch (error) {
-        console.error("Failed to fetch leaderboard data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    loadData();
-  }, []);
-
   // ── Scope change ─────────────────────────────────────────────────────────────
-  const handleScopeChange = useCallback(
-    async (newScope: Scope) => {
-      if (newScope === scope) return;
-      setScope(newScope);
-      setIsScopeLoading(true);
-      setFindMeActive(false);
-      try {
-        const res = await fetch(`/api/leaderboard?scope=${newScope}&limit=50`);
-        if (res.ok) {
-          const data = await res.json();
-          setChampions(mapEntries(data.leaderboard ?? []));
-        }
-      } catch (err) {
-        console.error("Failed to fetch leaderboard:", err);
-      } finally {
-        setIsScopeLoading(false);
-      }
-    },
-    [scope]
-  );
+  const handleScopeChange = (newScope: Scope) => {
+    if (newScope === scope) return;
+    setScope(newScope);
+    setFindMeActive(false);
+  };
 
   // ── Find Me ──────────────────────────────────────────────────────────────────
   const handleFindMe = () => {

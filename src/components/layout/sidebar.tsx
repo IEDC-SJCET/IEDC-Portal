@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { QueryClientContext } from "@tanstack/react-query";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -53,6 +54,8 @@ const DEFAULT_ICONS: Record<string, { bg: string; icon: string }> = {
 export function Sidebar({ items, role }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  // Optional: only the student layout provides a QueryClient.
+  const queryClient = useContext(QueryClientContext);
   const { data: session, isPending } = useSession();
   // Guests can browse the public event pages; offer them a login instead of sign out.
   const isGuest = !isPending && !session;
@@ -85,6 +88,7 @@ export function Sidebar({ items, role }: SidebarProps) {
       await signOut({
         fetchOptions: {
           onSuccess: () => {
+            queryClient?.clear();
             router.push("/auth/login");
             router.refresh();
           },

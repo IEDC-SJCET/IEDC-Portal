@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Loader2, Send, FolderPlus, ArrowUpRight } from "lucide-react";
+import { studentQueryKeys } from "@/lib/student-queries";
 
 export default function SubmitProjectPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
@@ -69,6 +72,8 @@ export default function SubmitProjectPage() {
       });
 
       if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: studentQueryKeys.projectLists });
+        queryClient.invalidateQueries({ queryKey: studentQueryKeys.profile });
         router.push("/student/projects");
       } else {
         const data = await res.json();

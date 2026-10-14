@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useContext, useState, useEffect, Suspense } from "react";
+import { QueryClientContext } from "@tanstack/react-query";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -57,6 +58,8 @@ function HeaderContent({ items = [], role = "user" }: HeaderProps) {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  // Optional: only the student layout provides a QueryClient.
+  const queryClient = useContext(QueryClientContext);
   const searchParams = useSearchParams();
 
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
@@ -110,6 +113,7 @@ function HeaderContent({ items = [], role = "user" }: HeaderProps) {
       await signOut({
         fetchOptions: {
           onSuccess: () => {
+            queryClient?.clear();
             router.push("/auth/login");
             router.refresh();
           },

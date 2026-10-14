@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { EventCard, EventCardProps } from "@/components/events/event-card";
 import { cn } from "@/lib/utils";
+import {
+  STUDENT_STALE_TIMES,
+  fetchJson,
+  studentQueryKeys,
+} from "@/lib/student-queries";
 
 const FILTER_ITEMS = [
   { key: "all", label: "All events" },
@@ -30,65 +36,59 @@ const LEGACY_TAB_TITLES: Record<string, string[]> = {
   gbm: ["gbm"],
 };
 
+const EVENTS_URL = "/api/events?status=all&limit=50";
+
+async function fetchEvents(): Promise<EventCardProps[]> {
+  const data = await fetchJson<{ events?: Record<string, unknown>[] }>(
+    EVENTS_URL
+  );
+  if (!data.events) return [];
+  const now = new Date();
+  const apiEvents: EventCardProps[] = data.events.map(
+    (e: Record<string, unknown>) => {
+      const startStr = (e.startDatetime as string) || "";
+      const endStr = (e.endDatetime as string) || "";
+      const startDate = startStr ? new Date(startStr) : null;
+      const endDate = endStr ? new Date(endStr) : null;
+      const dateHasPassed =
+        startDate && !isNaN(startDate.getTime())
+          ? endDate && !isNaN(endDate.getTime())
+            ? endDate < now
+            : startDate < now
+          : false;
+
+      return {
+        id: e.id as string,
+        title: e.title as string,
+        eventType: (e.eventType as string) || "workshop",
+        venue: (e.venue as string) || "IDEALab",
+        startDatetime: startStr,
+        endDatetime: endStr,
+        description: (e.description as string) || "",
+        posterUrl: (e.posterUrl as string) || null,
+        status: (e.status as string) || "published",
+        isClosed:
+          e.status === "completed" ||
+          e.status === "cancelled" ||
+          e.status === "closed" ||
+          dateHasPassed,
+        registered: Boolean(e.registered),
+      };
+    }
+  );
+  return apiEvents.filter((e) => e.status !== "draft");
+}
+
 function StudentEventsContent() {
   const searchParams = useSearchParams();
-  const [events, setEvents] = useState<EventCardProps[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: events = [], isPending: loading } = useQuery({
+    queryKey: studentQueryKeys.eventList(EVENTS_URL),
+    queryFn: fetchEvents,
+    staleTime: STUDENT_STALE_TIMES.events,
+  });
   const [activeTab, setActiveTab] = useState("all");
 
   const searchQuery = searchParams.get("q") || "";
-
-  useEffect(() => {
-    async function fetchEvents() {
-      try {
-        const res = await fetch("/api/events?status=all&limit=50");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.events) {
-            const now = new Date();
-            const apiEvents: EventCardProps[] = data.events.map(
-              (e: Record<string, unknown>) => {
-                const startStr = (e.startDatetime as string) || "";
-                const endStr = (e.endDatetime as string) || "";
-                const startDate = startStr ? new Date(startStr) : null;
-                const endDate = endStr ? new Date(endStr) : null;
-                const dateHasPassed =
-                  startDate && !isNaN(startDate.getTime())
-                    ? endDate && !isNaN(endDate.getTime())
-                      ? endDate < now
-                      : startDate < now
-                    : false;
-
-                return {
-                  id: e.id as string,
-                  title: e.title as string,
-                  eventType: (e.eventType as string) || "workshop",
-                  venue: (e.venue as string) || "IDEALab",
-                  startDatetime: startStr,
-                  endDatetime: endStr,
-                  description: (e.description as string) || "",
-                  posterUrl: (e.posterUrl as string) || null,
-                  status: (e.status as string) || "published",
-                  isClosed:
-                    e.status === "completed" ||
-                    e.status === "cancelled" ||
-                    e.status === "closed" ||
-                    dateHasPassed,
-                  registered: Boolean(e.registered),
-                };
-              }
-            );
-            setEvents(apiEvents.filter((e) => e.status !== "draft"));
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch events:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchEvents();
-  }, []);
 
   const upcomingEvents = events.filter((event) => {
     if (

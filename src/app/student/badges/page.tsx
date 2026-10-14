@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BadgeCard } from "@/components/badges/badge-card";
 import type { BadgeCriteria } from "@/lib/points";
 import { Sparkles, RefreshCw, Shield, Trophy, Wrench, Users, Zap, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fetchJson, studentQueryKeys } from "@/lib/student-queries";
 
 interface BadgeData {
   id: string;
@@ -27,28 +29,16 @@ const CRITERIA_TYPE_META: Record<
 };
 
 export default function StudentBadgesPage() {
-  const [badges, setBadges] = useState<BadgeData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: badges = [], isPending: loading } = useQuery({
+    queryKey: studentQueryKeys.badges,
+    queryFn: async () => {
+      const data = await fetchJson<{ badges?: BadgeData[] }>("/api/badges");
+      return data.badges || [];
+    },
+  });
   const [checking, setChecking] = useState(false);
   const [filter, setFilter] = useState<string>("all");
-
-  async function fetchBadges() {
-    try {
-      const res = await fetch("/api/badges");
-      if (res.ok) {
-        const data = await res.json();
-        setBadges(data.badges || []);
-      }
-    } catch (e) {
-      console.error("Failed to load badges", e);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    fetchBadges();
-  }, []);
 
   async function handleCheck() {
     setChecking(true);
@@ -57,7 +47,7 @@ export default function StudentBadgesPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.newlyAwarded?.length > 0) {
-          await fetchBadges();
+          await queryClient.invalidateQueries({ queryKey: studentQueryKeys.badges });
         }
       }
     } catch (e) {

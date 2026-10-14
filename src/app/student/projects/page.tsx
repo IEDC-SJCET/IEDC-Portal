@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,11 @@ import {
   Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  STUDENT_STALE_TIMES,
+  fetchJson,
+  studentQueryKeys,
+} from "@/lib/student-queries";
 
 const LinkedinIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -109,9 +115,36 @@ interface MyApplication {
   project?: ProjectData | null;
 }
 
+async function fetchProjects(view: "browse" | "my"): Promise<ProjectData[]> {
+  const url =
+    view === "browse"
+      ? "/api/projects?status=approved&limit=30"
+      : "/api/projects?my=true";
+  const data = await fetchJson<{ projects?: Record<string, unknown>[] }>(url);
+  const rawList: Record<string, unknown>[] = data.projects || [];
+  return rawList.map((p) => ({
+    id: p.id as string,
+    title: (p.title as string) || "Untitled Project",
+    description: (p.description as string) || null,
+    githubUrl: (p.githubUrl as string) || (p.github_url as string) || null,
+    demoUrl: (p.demoUrl as string) || (p.demo_url as string) || null,
+    tags: (p.tags as string[]) || [],
+    lookingForContributors: Boolean(p.lookingForContributors ?? p.looking_for_contributors),
+    contributorRoles: (p.contributorRoles as string[]) || (p.contributor_roles as string[]) || [],
+    contributorDescription: (p.contributorDescription as string) || (p.contributor_description as string) || null,
+    status: (p.status as string) || "pending",
+    reviewComment:
+      (p.reviewComment as string) || (p.review_comment as string) || null,
+    submittedAt:
+      (p.submittedAt as string) || (p.submitted_at as string) || null,
+    submittedBy: (p.submittedBy as string) || (p.submitted_by as string) || null,
+    studentName: (p.studentName as string) || (p.student_name as string) || null,
+    department: (p.department as string) || null,
+  }));
+}
+
 export default function StudentProjectsPage() {
-  const [projects, setProjects] = useState<ProjectData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"browse" | "my" | "collabs">("browse");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -145,74 +178,31 @@ export default function StudentProjectsPage() {
   // Applicant Profile Viewer Modal state
   const [viewingApplicantProfile, setViewingApplicantProfile] = useState<ApplicantProfile | null>(null);
 
-  // Collaboration requests sent by the signed-in student
-  const [myApplications, setMyApplications] = useState<MyApplication[]>([]);
-  const [myProfileId, setMyProfileId] = useState<string | null>(null);
   const [viewingApplicationsFor, setViewingApplicationsFor] = useState<ProjectData | null>(null);
 
-  const fetchProjects = async () => {
-    // The Collabs tab is rendered from the student's accepted applications,
-    // which already carry their project payload.
-    if (activeTab === "collabs") {
-      setProjects([]);
-      setLoading(false);
-      return;
-    }
+  // The Collabs tab is rendered from the student's accepted applications,
+  // which already carry their project payload, so no project list is fetched.
+  const projectsView = activeTab === "collabs" ? null : activeTab;
+  const projectsQuery = useQuery({
+    queryKey: studentQueryKeys.projectList(projectsView ?? "browse"),
+    queryFn: () => fetchProjects(projectsView ?? "browse"),
+    enabled: projectsView !== null,
+    staleTime:
+      projectsView === "browse" ? STUDENT_STALE_TIMES.approvedProjects : undefined,
+  });
+  const projects = projectsView ? projectsQuery.data ?? [] : [];
+  const loading = projectsView !== null && projectsQuery.isPending;
 
-    setLoading(true);
-    try {
-      const url =
-        activeTab === "browse"
-          ? "/api/projects?status=approved&limit=30"
-          : "/api/projects?my=true";
-      const res = await fetch(url);
-      const data = await res.json();
-      const rawList: Record<string, unknown>[] = data.projects || [];
-      const formatted: ProjectData[] = rawList.map((p) => ({
-        id: p.id as string,
-        title: (p.title as string) || "Untitled Project",
-        description: (p.description as string) || null,
-        githubUrl: (p.githubUrl as string) || (p.github_url as string) || null,
-        demoUrl: (p.demoUrl as string) || (p.demo_url as string) || null,
-        tags: (p.tags as string[]) || [],
-        lookingForContributors: Boolean(p.lookingForContributors ?? p.looking_for_contributors),
-        contributorRoles: (p.contributorRoles as string[]) || (p.contributor_roles as string[]) || [],
-        contributorDescription: (p.contributorDescription as string) || (p.contributor_description as string) || null,
-        status: (p.status as string) || "pending",
-        reviewComment:
-          (p.reviewComment as string) || (p.review_comment as string) || null,
-        submittedAt:
-          (p.submittedAt as string) || (p.submitted_at as string) || null,
-        submittedBy: (p.submittedBy as string) || (p.submitted_by as string) || null,
-        studentName: (p.studentName as string) || (p.student_name as string) || null,
-        department: (p.department as string) || null,
-      }));
-      setProjects(formatted);
-    } catch (error) {
-      console.error("Failed to fetch projects:", error);
-      setProjects([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchMyApplications = async () => {
-    try {
-      const res = await fetch("/api/projects/my-applications");
-      if (res.ok) {
-        const data = await res.json();
-        setMyApplications(data.applications || []);
-        setMyProfileId(data.profileId || null);
-      }
-    } catch (error) {
-      console.error("Failed to fetch my applications:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchProjects();
-    fetchMyApplications();
-  }, [activeTab]);
+  // Collaboration requests sent by the signed-in student
+  const { data: myApplicationsData } = useQuery({
+    queryKey: studentQueryKeys.myApplications,
+    queryFn: () =>
+      fetchJson<{ applications?: MyApplication[]; profileId?: string | null }>(
+        "/api/projects/my-applications"
+      ),
+  });
+  const myApplications = myApplicationsData?.applications || [];
+  const myProfileId = myApplicationsData?.profileId || null;
 
   const applicationsFor = (projectId: string) =>
     myApplications.filter((a) => a.projectId === projectId);
@@ -292,7 +282,7 @@ export default function StudentProjectsPage() {
 
       if (res.ok) {
         closeEditModal();
-        fetchProjects();
+        queryClient.invalidateQueries({ queryKey: studentQueryKeys.projectLists });
       } else {
         const data = await res.json();
         setResubmitError(data.error || "Failed to resubmit project");
@@ -346,7 +336,7 @@ export default function StudentProjectsPage() {
       const data = await res.json();
       if (res.ok) {
         setApplySuccess(`Application submitted successfully for ${domainToApply}!`);
-        fetchMyApplications();
+        queryClient.invalidateQueries({ queryKey: studentQueryKeys.myApplications });
         setTimeout(() => {
           setApplyingProject(null);
           setApplySuccess("");
