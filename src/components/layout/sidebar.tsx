@@ -18,6 +18,7 @@ import {
   LogOut,
   LogIn,
   Shield,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut, useSession } from "@/lib/auth-client";
@@ -195,6 +196,26 @@ export function Sidebar({ items, role }: SidebarProps) {
           );
         })}
       </nav>
+
+      {/* IEDC Website external link */}
+      <div className="px-2 lg:px-6 pb-3">
+        <a
+          href="https://iedc.sjcet.in/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3.5 px-3.5 h-[49px] rounded-[30px] transition-all duration-200 bg-black border border-[#2B2B2B] text-white/80 hover:text-white hover:border-white/30"
+        >
+          <div className="w-7 h-7 rounded-full bg-[#EB594C] flex items-center justify-center flex-shrink-0 shadow-sm">
+            <ExternalLink className="w-3.5 h-3.5 text-white" />
+          </div>
+          <span
+            className="hidden lg:block text-base font-medium tracking-[-0.4px]"
+            style={{ fontFamily: '"Hanken Grotesk", sans-serif' }}
+          >
+            IEDC Website
+          </span>
+        </a>
+      </div>
 
       {/* Bottom Profile section */}
       <div className="px-2 lg:px-6 pb-6 pt-4 border-t border-[#2B2B2B] space-y-3">

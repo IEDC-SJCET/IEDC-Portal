@@ -5,7 +5,7 @@ import { QueryClientContext } from "@tanstack/react-query";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Menu, X, LogOut, LogIn, Search } from "lucide-react";
+import { Menu, X, LogOut, LogIn, Search, ExternalLink } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -402,6 +402,21 @@ function HeaderContent({ items = [], role = "user" }: HeaderProps) {
                     </Link>
                   );
                 })}
+
+                <a
+                  href="https://iedc.sjcet.in/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center gap-3.5 h-[49px] px-[18px] rounded-[30px] transition-all duration-300 transform active:scale-95 bg-black border border-[#2B2B2B] text-white/80 hover:text-white hover:border-white/30"
+                >
+                  <div className="w-7 h-7 rounded-full bg-[#EB594C] flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <ExternalLink className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <span className="text-base font-medium tracking-[-0.4px]" style={{ fontFamily: '"Hanken Grotesk", sans-serif' }}>
+                    IEDC Website
+                  </span>
+                </a>
               </nav>
             )}
           </div>

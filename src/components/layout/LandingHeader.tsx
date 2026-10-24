@@ -136,6 +136,14 @@ export function LandingHeader() {
           >
             Projects
           </Link>
+          <a
+            href="https://iedc.sjcet.in/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-semibold text-[#000000] hover:text-[#E60B09] transition-colors inline-flex items-center gap-0.5"
+          >
+            IEDC Website <ArrowUpRight className="w-3 h-3" />
+          </a>
         </nav>
 
         {/* Action Button + Mobile Hamburger Button */}
@@ -266,6 +274,24 @@ export function LandingHeader() {
                     </Link>
                   );
                 })}
+
+                <a
+                  href="https://iedc.sjcet.in/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3.5 h-[49px] px-[18px] rounded-[30px] transition-all duration-200 bg-black border border-[#2B2B2B] text-white/80 hover:text-white hover:border-white/30"
+                >
+                  <div className="w-7 h-7 rounded-full bg-[#EB594C] flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <ArrowUpRight className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <span
+                    className="text-base font-medium tracking-[-0.4px]"
+                    style={{ fontFamily: '"Hanken Grotesk", sans-serif' }}
+                  >
+                    IEDC Website
+                  </span>
+                </a>
               </nav>
             </div>
 
